@@ -1,4 +1,4 @@
-data/
+/data/
 
 # Dependencies and build output
 node_modules
