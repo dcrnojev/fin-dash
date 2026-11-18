@@ -38,10 +38,35 @@ export function checkImportFile(fileText: string): ImportCheckResult {
   }
 
   const { tabs, ledger } = roundTrip
+  const unwritableCell = findUnwritableCell(tabs)
+
+  if (unwritableCell)
+    return { check: null, problem: unwritableCell }
+
   // 'YYYY-MM' text sorts in time order.
   const months = [...ledger.months.keys(), ...ledger.snapshots.map(snapshot => snapshot.month)].sort()
 
   return { check: { tabs, ledger, firstMonth: months.at(0) ?? null, lastMonth: months.at(-1) ?? null }, problem: null }
+}
+
+// The Sheets API takes only text, numbers and true/false, and the spreadsheet already exists by the time a write fails.
+function findUnwritableCell(tabs: Record<TabName, CellValue[][]>): string | null {
+  for (const [tab, rows] of Object.entries(tabs)) {
+    for (const [rowIndex, row] of rows.entries()) {
+      const columnIndex = row.findIndex(cell => !isWritableCell(cell))
+
+      if (columnIndex !== -1) {
+        const place = `The ${tab} tab, row ${rowIndex + 1}, column ${String(rows[0][columnIndex])}`
+        return `${place} holds a value that is not text, a number or true/false. Fix the import and run npm run import again.`
+      }
+    }
+  }
+
+  return null
+}
+
+function isWritableCell(cell: unknown): boolean {
+  return cell === null || typeof cell === 'string' || typeof cell === 'boolean' || (typeof cell === 'number' && Number.isFinite(cell))
 }
 
 function looksLikeBundle(value: unknown): value is Bundle {

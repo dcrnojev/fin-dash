@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import type { SpreadsheetRef } from '../data'
 import { displayMonth } from '../format'
 import { checkImportFile, type ImportCheck } from '../setup/checkImportFile'
@@ -27,30 +27,58 @@ type CreateState =
 
 interface CreateFromImportProps {
   onCreated: (created: CreatedSpreadsheet) => void
+  onCreatingChange: (creating: boolean) => void
 }
 
-export function CreateFromImport({ onCreated }: CreateFromImportProps) {
+export function CreateFromImport({ onCreated, onCreatingChange }: CreateFromImportProps) {
   const [state, setState] = useState<CreateState>({ status: 'no-file' })
+  const isMounted = useRef(false)
+
+  useEffect(() => {
+    isMounted.current = true
+
+    return () => {
+      isMounted.current = false
+    }
+  }, [])
 
   async function readChosenFile(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
+    const input = event.target
+    const file = input.files?.[0]
 
     if (!file) {
       setState({ status: 'no-file' })
       return
     }
 
-    const { check, problem } = checkImportFile(await file.text())
+    let fileText: string
+
+    try {
+      fileText = await file.text()
+    } catch (error) {
+      setState({ status: 'unusable', problem: `The file could not be read: ${error instanceof Error ? error.message : String(error)}` })
+      return
+    } finally {
+      input.value = ''
+    }
+
+    const { check, problem } = checkImportFile(fileText)
     setState(check ? { status: 'checked', check } : { status: 'unusable', problem })
   }
 
   async function create(check: ImportCheck) {
+    onCreatingChange(true)
+
     try {
       const created = await createSpreadsheetFromImport(check.tabs, step => setState({ status: 'creating', check, step }))
-      onCreated(created)
+
+      if (isMounted.current)
+        onCreated(created)
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       setState({ status: 'failed', check, message, halfBuilt: error instanceof SetupError ? error.spreadsheet : null })
+    } finally {
+      onCreatingChange(false)
     }
   }
 

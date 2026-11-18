@@ -68,6 +68,11 @@ export function checkReferences(tabs: ReferenceTabs, issues: Issue[]): Reference
       return false
     }
 
+    if (pot.closed !== null && monthIndex(row.month) > monthIndex(pot.closed)) {
+      report('error', tab, row.ref, 'month', 'after-pot-closed', `Pot ${row.pot} closed in ${pot.closed}, before ${row.month}.`)
+      return false
+    }
+
     return true
   }
 

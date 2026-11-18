@@ -18,6 +18,7 @@ export default function App() {
   const [session, setSession] = useState<Session>({ status: 'resuming' })
   const [spreadsheet, setSpreadsheet] = useState<SpreadsheetRef | null>(readRememberedSpreadsheet)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [creatingSpreadsheet, setCreatingSpreadsheet] = useState(false)
 
   const showError = useCallback((error: unknown) => {
     if (error instanceof DataError && error.kind === 'cancelled')
@@ -93,7 +94,7 @@ export default function App() {
     <main className="page">
       <header className="page-header">
         <h1>fin-dash</h1>
-        {session.status === 'signed-in' && <AccountBar user={session.user} onSignOut={signOut} />}
+        {session.status === 'signed-in' && <AccountBar user={session.user} signOutDisabled={creatingSpreadsheet} onSignOut={signOut} />}
       </header>
 
       {errorMessage && <ErrorMessage message={errorMessage} onDismiss={() => setErrorMessage(null)} />}
@@ -102,7 +103,13 @@ export default function App() {
         spreadsheet ? (
           <SpreadsheetScreen key={spreadsheet.id} spreadsheet={spreadsheet} onForget={clearSpreadsheet} />
         ) : (
-          <SetupScreen onChosen={chooseSpreadsheet} onCreated={openCreatedSpreadsheet} onError={showError} />
+          <SetupScreen
+            creating={creatingSpreadsheet}
+            onChosen={chooseSpreadsheet}
+            onCreated={openCreatedSpreadsheet}
+            onCreatingChange={setCreatingSpreadsheet}
+            onError={showError}
+          />
         )
       ) : (
         <SignInPanel

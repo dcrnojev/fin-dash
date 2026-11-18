@@ -76,8 +76,13 @@ interface GoogleNamespace {
   picker: GooglePicker
 }
 
+interface GapiLoadConfig {
+  callback: () => void
+  onerror: () => void
+}
+
 interface Gapi {
-  load(library: string, callback: () => void): void
+  load(library: string, config: GapiLoadConfig): void
 }
 
 interface GoogleWindow {
@@ -99,7 +104,10 @@ function loadScript(src: string): Promise<void> {
     script.src = src
     script.async = true
     script.onload = () => resolve()
-    script.onerror = () => reject(new Error(`Could not load ${src}. Check the network connection or a content blocker.`))
+    script.onerror = () => {
+      scriptLoads.delete(src)
+      reject(new Error(`Could not load ${src}. Check the network connection or a content blocker.`))
+    }
     document.head.appendChild(script)
   })
   scriptLoads.set(src, load)
@@ -125,7 +133,12 @@ export async function loadPicker(): Promise<GooglePicker> {
   if (!gapi)
     throw new Error('The Google API loader loaded but gapi is missing.')
 
-  await new Promise<void>(resolve => gapi.load('picker', resolve))
+  await new Promise<void>((resolve, reject) => {
+    gapi.load('picker', {
+      callback: resolve,
+      onerror: () => reject(new Error('Could not load the Google Picker library. Check the network connection or a content blocker.')),
+    })
+  })
 
   const picker = googleWindow.google?.picker
 

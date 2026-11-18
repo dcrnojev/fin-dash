@@ -1,5 +1,5 @@
 import { monthIndex, monthsFromTo } from '../domain/month.ts'
-import type { Cents, Ledger, Month, Pot, PotId, PotKind } from '../domain/types.ts'
+import type { Cents, Holding, HoldingId, Ledger, Month, Pot, PotId, PotKind } from '../domain/types.ts'
 
 // measured: from a snapshot row. estimated: interpolated for display only; never written back and never a measurement.
 export type Quality = 'measured' | 'estimated'
@@ -44,7 +44,7 @@ export interface SnapshotHistory {
   combined: MonthTotal[]
 }
 
-type HistoryInput = Pick<Ledger, 'pots' | 'snapshots' | 'months'>
+type HistoryInput = Pick<Ledger, 'pots' | 'holdings' | 'snapshots' | 'months'>
 
 // Month-end values per pot over the whole history, from the first month in the snapshots or months tab to the last.
 export function snapshotHistory(ledger: HistoryInput): SnapshotHistory {
@@ -63,12 +63,16 @@ export function snapshotHistory(ledger: HistoryInput): SnapshotHistory {
 
 function potGroupHistory(ledger: HistoryInput, kind: PotKind, months: Month[], gapMonths: ReadonlySet<Month>): PotGroupHistory {
   const valuesByPotAndMonth = new Map<string, Cents>()
+  const holdingsWithRowsByPotAndMonth = new Map<string, Set<HoldingId>>()
   const firstSnapshotMonthByPot = new Map<PotId, Month>()
 
   for (const snapshot of ledger.snapshots) {
     const key = `${snapshot.pot}|${snapshot.month}`
     // A pot's value is its pot-level row or the sum of its holding rows; the validator rules out having both.
     valuesByPotAndMonth.set(key, ((valuesByPotAndMonth.get(key) ?? 0) + snapshot.value) as Cents)
+
+    if (snapshot.holding !== null)
+      holdingsWithRowsByPotAndMonth.set(key, (holdingsWithRowsByPotAndMonth.get(key) ?? new Set()).add(snapshot.holding))
 
     const first = firstSnapshotMonthByPot.get(snapshot.pot)
 
@@ -85,6 +89,23 @@ function potGroupHistory(ledger: HistoryInput, kind: PotKind, months: Month[], g
     return pot.closed === null || monthIndex(month) <= monthIndex(pot.closed)
   }
 
+  const holdingsByPot = new Map<PotId, Holding[]>()
+
+  for (const holding of ledger.holdings)
+    holdingsByPot.set(holding.pot, [...(holdingsByPot.get(holding.pot) ?? []), holding])
+
+  // Holding rows sum to the pot's value only when every holding open that month has one; otherwise the value is unknown.
+  const measuredValue = (pot: Pot, month: Month): Cents | null => {
+    const key = `${pot.id}|${month}`
+    const holdingsWithRows = holdingsWithRowsByPotAndMonth.get(key)
+    const openHoldings = (holdingsByPot.get(pot.id) ?? []).filter(holding => isHoldingOpen(holding, month))
+
+    if (holdingsWithRows !== undefined && openHoldings.some(holding => !holdingsWithRows.has(holding.id)))
+      return null
+
+    return valuesByPotAndMonth.get(key) ?? null
+  }
+
   const groupPots = ledger.pots
     .filter(pot => pot.kind === kind && months.some(month => isTracked(pot, month)))
     .sort((a, b) => a.sort - b.sort)
@@ -92,8 +113,8 @@ function potGroupHistory(ledger: HistoryInput, kind: PotKind, months: Month[], g
   // Per pot, one entry per month of the history: undefined while not tracked, else the value or null.
   const valuesByPot = new Map(
     groupPots.map(pot => {
-      const measuredValue = (month: Month) => valuesByPotAndMonth.get(`${pot.id}|${month}`) ?? null
-      return [pot.id, withEstimates(months.map(month => (isTracked(pot, month) ? measuredValue(month) : undefined)))]
+      const values = months.map(month => (isTracked(pot, month) ? measuredValue(pot, month) : undefined))
+      return [pot.id, withEstimates(values)]
     })
   )
 
@@ -111,6 +132,13 @@ function potGroupHistory(ledger: HistoryInput, kind: PotKind, months: Month[], g
   })
 
   return { pots: groupPots, months: groupMonths }
+}
+
+function isHoldingOpen(holding: Holding, month: Month): boolean {
+  const opened = holding.opened === null || monthIndex(holding.opened) <= monthIndex(month)
+  const notClosed = holding.closed === null || monthIndex(month) <= monthIndex(holding.closed)
+
+  return opened && notClosed
 }
 
 // Fills each missing value on a straight line between the nearest measured values before and after it, rounded to the

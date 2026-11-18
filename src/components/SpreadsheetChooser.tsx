@@ -2,11 +2,12 @@ import { useState, type FormEvent } from 'react'
 import { dataStore, type SpreadsheetRef } from '../data'
 
 interface SpreadsheetChooserProps {
+  disabled: boolean
   onChosen: (spreadsheet: SpreadsheetRef) => void
   onError: (error: unknown) => void
 }
 
-export function SpreadsheetChooser({ onChosen, onError }: SpreadsheetChooserProps) {
+export function SpreadsheetChooser({ disabled, onChosen, onError }: SpreadsheetChooserProps) {
   const [busy, setBusy] = useState(false)
   const [linkOrId, setLinkOrId] = useState('')
 
@@ -51,7 +52,7 @@ export function SpreadsheetChooser({ onChosen, onError }: SpreadsheetChooserProp
       <p>Open the family spreadsheet if it already exists. Google only lets this app open spreadsheets chosen here.</p>
 
       <div className="button-row">
-        <button type="button" className="primary-button" onClick={choose} disabled={busy}>
+        <button type="button" className="primary-button" onClick={choose} disabled={busy || disabled}>
           Choose spreadsheet
         </button>
       </div>
@@ -67,7 +68,7 @@ export function SpreadsheetChooser({ onChosen, onError }: SpreadsheetChooserProp
             placeholder="https://docs.google.com/spreadsheets/d/..."
             aria-label="Spreadsheet link or ID"
           />
-          <button type="submit" disabled={busy || !extractSpreadsheetId(linkOrId)}>
+          <button type="submit" disabled={busy || disabled || !extractSpreadsheetId(linkOrId)}>
             Open
           </button>
         </form>

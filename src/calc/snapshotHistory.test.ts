@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Cents, HoldingId, Month, MonthRecord, Pot, PotId, PotKind, Snapshot } from '../domain/types.ts'
+import type { Cents, Holding, HoldingId, Month, MonthRecord, Pot, PotId, PotKind, Snapshot } from '../domain/types.ts'
 import { snapshotHistory } from './snapshotHistory.ts'
 
 function pot(id: string, kind: PotKind, sort: number, opened: string | null = null): Pot {
@@ -33,6 +33,10 @@ function snapshot(month: string, potId: string, cents: number, holding: string |
   }
 }
 
+function holding(id: string, potId: string, closed: string | null = null): Holding {
+  return { id: id as HoldingId, pot: potId as PotId, label: id, code: null, opened: null, closed: closed as Month | null, note: null }
+}
+
 function monthRecords(...records: [string, MonthRecord['status']][]): Map<Month, MonthRecord> {
   return new Map(
     records.map(([month, status]) => [
@@ -51,6 +55,7 @@ describe('snapshotHistory', () => {
   it('totals the pots of each kind per month, summing holding rows into their pot', () => {
     const history = snapshotHistory({
       pots: [cashB, cashA, fund],
+      holdings: [],
       snapshots: [
         snapshot('2030-01', 'cash-a', 100_00),
         snapshot('2030-01', 'cash-b', 50_00),
@@ -66,9 +71,30 @@ describe('snapshotHistory', () => {
     expect(history.combined[0].total).toBe(650_00)
   })
 
+  it('treats a pot as unknown in a month where a holding open that month has no row, and ignores closed holdings', () => {
+    const history = snapshotHistory({
+      pots: [broker],
+      holdings: [holding('broker-x', 'broker'), holding('broker-y', 'broker'), holding('broker-old', 'broker', '2029-12')],
+      snapshots: [
+        snapshot('2030-01', 'broker', 300_00, 'broker-x'),
+        snapshot('2030-01', 'broker', 200_00, 'broker-y'),
+        snapshot('2030-02', 'broker', 310_00, 'broker-x'),
+      ],
+      months: new Map(),
+    })
+
+    const [january, february] = history.investments.months
+
+    expect(january.potValues.get(broker.id)).toEqual({ cents: 500_00, quality: 'measured' })
+    expect(january.total).toBe(500_00)
+    expect(february.potValues.get(broker.id)).toBeNull()
+    expect(february.total).toBeNull()
+  })
+
   it('treats a missing snapshot row as unknown and a zero row as known', () => {
     const history = snapshotHistory({
       pots: [cashA, cashB],
+      holdings: [],
       snapshots: [
         snapshot('2030-01', 'cash-a', 100_00),
         snapshot('2030-01', 'cash-b', 0),
@@ -89,6 +115,7 @@ describe('snapshotHistory', () => {
   it('does not count a pot as unknown before its first snapshot or opened month', () => {
     const history = snapshotHistory({
       pots: [broker, { ...fund, opened: '2030-02' as Month }],
+      holdings: [],
       snapshots: [
         snapshot('2030-01', 'broker', 10_00),
         snapshot('2030-02', 'broker', 11_00),
@@ -111,6 +138,7 @@ describe('snapshotHistory', () => {
   it('keeps gap months marked as gaps and fills them with estimated totals', () => {
     const history = snapshotHistory({
       pots: [cashA],
+      holdings: [],
       snapshots: [snapshot('2030-01', 'cash-a', 100_00), snapshot('2030-04', 'cash-a', 130_00)],
       months: monthRecords(['2030-01', 'legacy'], ['2030-02', 'gap'], ['2030-03', 'gap'], ['2030-04', 'legacy']),
     })
@@ -127,6 +155,7 @@ describe('snapshotHistory', () => {
   it('interpolates a missing month between the nearest measured values, rounded to the cent', () => {
     const history = snapshotHistory({
       pots: [cashA],
+      holdings: [],
       snapshots: [snapshot('2030-01', 'cash-a', 100_00), snapshot('2030-04', 'cash-a', 100_01)],
       months: new Map(),
     })
@@ -143,6 +172,7 @@ describe('snapshotHistory', () => {
   it('does not extrapolate before the first or after the last measured value', () => {
     const history = snapshotHistory({
       pots: [{ ...cashA, opened: '2030-01' as Month }, cashB],
+      holdings: [],
       snapshots: [
         snapshot('2030-02', 'cash-a', 100_00),
         snapshot('2030-03', 'cash-a', 110_00),
@@ -170,6 +200,7 @@ describe('snapshotHistory', () => {
   it('leaves a pot unknown in a gap month when it has no measured value on one side, while others are estimated', () => {
     const history = snapshotHistory({
       pots: [cashA, broker],
+      holdings: [],
       snapshots: [snapshot('2030-01', 'cash-a', 100_00), snapshot('2030-03', 'cash-a', 120_00), snapshot('2030-01', 'broker', 40_00)],
       months: monthRecords(['2030-01', 'legacy'], ['2030-02', 'gap'], ['2030-03', 'legacy']),
     })
@@ -182,6 +213,7 @@ describe('snapshotHistory', () => {
   it('makes the combined total partial when either kind has an unknown pot', () => {
     const history = snapshotHistory({
       pots: [cashA, broker],
+      holdings: [],
       snapshots: [
         snapshot('2030-01', 'cash-a', 100_00),
         snapshot('2030-01', 'broker', 40_00),

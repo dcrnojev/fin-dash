@@ -51,7 +51,14 @@ export class GoogleSession {
     if (!this.user)
       throw new DataError('needs-click', 'Sign in first.')
 
-    const response = await this.requestToken({ prompt: '', login_hint: this.user.email })
+    const signedInEmail = this.user.email
+    const response = await this.requestToken({ prompt: '', login_hint: signedInEmail })
+    const renewedAccount = await fetchUserInfo(response.access_token)
+
+    // login_hint only preselects an account; Google may still renew for another one signed in to the browser.
+    if (renewedAccount.email !== signedInEmail)
+      throw new DataError('failed', `Renewing access returned a different Google account than ${signedInEmail}. Sign in again.`)
+
     const accessToken = this.acceptToken(response)
     this.keepForThisTab()
     return accessToken

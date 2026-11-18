@@ -42,4 +42,22 @@ describe('readLedger', () => {
       ['2030-03', 25050],
     ])
   })
+
+  it('skips a snapshot row after the month its pot closed', () => {
+    const ledger = readLedger({
+      ...referenceTabs,
+      pots: [
+        ['id', 'label', 'kind', 'owner', 'liquidity', 'cadence', 'closed_month', 'sort'],
+        ['cash-a', 'Cash A', 'cash', 'pa', 'liquid', 'monthly', '2030-02', 10],
+      ],
+      snapshots: [
+        ['month', 'pot_id', 'value'],
+        ['2030-02', 'cash-a', 100],
+        ['2030-03', 'cash-a', 100],
+      ],
+    })
+
+    expect(ledger.issues.map(issue => [issue.code, issue.tab, issue.row])).toEqual([['after-pot-closed', 'snapshots', 3]])
+    expect(ledger.snapshots.map(snapshot => snapshot.month)).toEqual(['2030-02'])
+  })
 })
