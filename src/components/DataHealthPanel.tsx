@@ -11,12 +11,14 @@ const severityNames: Record<Issue['severity'], { one: string; many: string }> = 
 interface DataHealthPanelProps {
   issues: readonly Issue[]
   tabLinks: Readonly<Record<string, string>>
+  // Messages can quote amounts, so they are hidden with them; where each issue is stays visible.
+  hideAmounts: boolean
   onReload: () => void
 }
 
 // What the validator found in the spreadsheet. Rows with errors are left out of the figures, so errors start expanded;
 // warnings and notes alone stay folded into one line.
-export function DataHealthPanel({ issues, tabLinks, onReload }: DataHealthPanelProps) {
+export function DataHealthPanel({ issues, tabLinks, hideAmounts, onReload }: DataHealthPanelProps) {
   const groups = severityOrder
     .map(severity => ({ severity, issues: issues.filter(issue => issue.severity === severity) }))
     .filter(group => group.issues.length > 0)
@@ -47,7 +49,7 @@ export function DataHealthPanel({ issues, tabLinks, onReload }: DataHealthPanelP
           {groups.map(group => (
             <div key={group.severity} className="issue-group">
               <h3 className="issue-group-heading">{severityNames[group.severity].many}</h3>
-              <IssueList issues={group.issues} tabLinks={tabLinks} />
+              <IssueList issues={group.issues} tabLinks={tabLinks} hideMessages={hideAmounts} />
             </div>
           ))}
         </details>

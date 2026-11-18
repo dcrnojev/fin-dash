@@ -108,20 +108,20 @@ describe('snapshotHistory', () => {
     expect(march.total).toBe(17_00)
   })
 
-  it('keeps gap months marked as gaps and fills them with totals flagged as estimated', () => {
+  it('keeps gap months marked as gaps and fills them with estimated totals', () => {
     const history = snapshotHistory({
       pots: [cashA],
       snapshots: [snapshot('2030-01', 'cash-a', 100_00), snapshot('2030-04', 'cash-a', 130_00)],
       months: monthRecords(['2030-01', 'legacy'], ['2030-02', 'gap'], ['2030-03', 'gap'], ['2030-04', 'legacy']),
     })
 
-    expect(history.cash.months.map(month => [month.month, month.isGap, month.total, month.knownPart, month.isEstimated])).toEqual([
-      ['2030-01', false, 100_00, null, false],
-      ['2030-02', true, 110_00, null, true],
-      ['2030-03', true, 120_00, null, true],
-      ['2030-04', false, 130_00, null, false],
+    expect(history.cash.months.map(month => [month.month, month.isGap, month.total, month.estimatedTotal, month.knownPart])).toEqual([
+      ['2030-01', false, 100_00, null, null],
+      ['2030-02', true, null, 110_00, null],
+      ['2030-03', true, null, 120_00, null],
+      ['2030-04', false, 130_00, null, null],
     ])
-    expect(history.combined[1]).toMatchObject({ isGap: true, total: 110_00, knownPart: null, isEstimated: true })
+    expect(history.combined[1]).toMatchObject({ isGap: true, total: null, estimatedTotal: 110_00, knownPart: null })
   })
 
   it('interpolates a missing month between the nearest measured values, rounded to the cent', () => {
@@ -176,7 +176,7 @@ describe('snapshotHistory', () => {
 
     expect(history.cash.months[1].potValues.get(cashA.id)).toEqual({ cents: 110_00, quality: 'estimated' })
     expect(history.investments.months[1].potValues.get(broker.id)).toBeNull()
-    expect(history.combined[1]).toMatchObject({ isGap: true, total: null, knownPart: 110_00, isEstimated: true })
+    expect(history.combined[1]).toMatchObject({ isGap: true, total: null, estimatedTotal: null, knownPart: 110_00, knownPartIncludesEstimates: true })
   })
 
   it('makes the combined total partial when either kind has an unknown pot', () => {

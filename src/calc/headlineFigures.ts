@@ -7,17 +7,20 @@ export interface Change {
   amount: Cents
   // The change as a fraction of the earlier total; null when that total is zero.
   ratio: number | null
-  // Whether either of the two totals includes an estimated pot value.
-  isEstimated: boolean
 }
 
+// Like a month total, at most one of `total`, `estimatedTotal` and `knownPart` is set. A change is only computed between
+// two complete totals: against a lower bound it would mostly measure what is unknown. It sits in the plain field when both
+// totals are measured and in the `estimated` one when either includes an estimate, so at most one of each pair is set.
 export interface HeadlineFigure {
   total: Cents | null
+  estimatedTotal: Cents | null
   knownPart: Cents | null
-  isEstimated: boolean
-  // Only between two complete totals: a change against a partial total would mostly measure what is unknown.
+  knownPartIncludesEstimates: boolean
   versusPreviousMonth: Change | null
+  estimatedVersusPreviousMonth: Change | null
   versusYearEarlier: Change | null
+  estimatedVersusYearEarlier: Change | null
 }
 
 export interface HeadlineFigures {
@@ -27,9 +30,14 @@ export interface HeadlineFigures {
   combined: HeadlineFigure
 }
 
+interface MeasuredOrEstimatedChange {
+  measured: Change | null
+  estimated: Change | null
+}
+
 // The figures for the latest month with any known value, or null when the history has none.
 export function headlineFigures(history: SnapshotHistory): HeadlineFigures | null {
-  const latest = history.combined.findLast(month => month.total !== null || month.knownPart !== null)
+  const latest = history.combined.findLast(month => month.total !== null || month.estimatedTotal !== null || month.knownPart !== null)
 
   if (latest === undefined)
     return null
@@ -45,28 +53,36 @@ export function headlineFigures(history: SnapshotHistory): HeadlineFigures | nul
 function headlineFigure(months: readonly MonthTotal[], month: Month): HeadlineFigure {
   const totalsByMonth = new Map(months.map(entry => [entry.month, entry]))
   const current = totalsByMonth.get(month)
-  const total = current?.total ?? null
-
-  const changeSince = (since: Month): Change | null => {
-    const earlierMonth = totalsByMonth.get(since)
-    const earlier = earlierMonth?.total ?? null
-
-    if (total === null || earlier === null)
-      return null
-
-    return {
-      since,
-      amount: (total - earlier) as Cents,
-      ratio: earlier === 0 ? null : (total - earlier) / Math.abs(earlier),
-      isEstimated: (current?.isEstimated ?? false) || (earlierMonth?.isEstimated ?? false),
-    }
-  }
+  const changeSince = (since: Month) => changeBetween(totalsByMonth.get(since), current, since)
+  const versusPreviousMonth = changeSince(addMonths(month, -1))
+  const versusYearEarlier = changeSince(addMonths(month, -12))
 
   return {
-    total,
+    total: current?.total ?? null,
+    estimatedTotal: current?.estimatedTotal ?? null,
     knownPart: current?.knownPart ?? null,
-    isEstimated: current?.isEstimated ?? false,
-    versusPreviousMonth: changeSince(addMonths(month, -1)),
-    versusYearEarlier: changeSince(addMonths(month, -12)),
+    knownPartIncludesEstimates: current?.knownPartIncludesEstimates ?? false,
+    versusPreviousMonth: versusPreviousMonth.measured,
+    estimatedVersusPreviousMonth: versusPreviousMonth.estimated,
+    versusYearEarlier: versusYearEarlier.measured,
+    estimatedVersusYearEarlier: versusYearEarlier.estimated,
   }
+}
+
+function changeBetween(earlier: MonthTotal | undefined, later: MonthTotal | undefined, since: Month): MeasuredOrEstimatedChange {
+  const noChange = { measured: null, estimated: null }
+
+  if (earlier === undefined || later === undefined)
+    return noChange
+
+  const from = earlier.total ?? earlier.estimatedTotal
+  const to = later.total ?? later.estimatedTotal
+
+  if (from === null || to === null)
+    return noChange
+
+  const change: Change = { since, amount: (to - from) as Cents, ratio: from === 0 ? null : (to - from) / Math.abs(from) }
+  const bothMeasured = earlier.total !== null && later.total !== null
+
+  return bothMeasured ? { measured: change, estimated: null } : { measured: null, estimated: change }
 }

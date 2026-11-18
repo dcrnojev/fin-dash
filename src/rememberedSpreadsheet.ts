@@ -1,10 +1,10 @@
 import type { SpreadsheetRef } from './data'
-import { readStoredString, removeStoredValue, writeStoredString } from './localStore'
+import { getLocalStorage, readStoredString, removeStoredValue, writeStoredString } from './webStorage'
 
 const rememberedSpreadsheetKey = 'fin-dash.spreadsheet'
 
 export function readRememberedSpreadsheet(): SpreadsheetRef | null {
-  const stored = readStoredString(rememberedSpreadsheetKey)
+  const stored = readStoredString(getLocalStorage, rememberedSpreadsheetKey)
 
   if (!stored)
     return null
@@ -18,9 +18,9 @@ export function readRememberedSpreadsheet(): SpreadsheetRef | null {
 }
 
 export function rememberSpreadsheet(spreadsheet: SpreadsheetRef): void {
-  writeStoredString(rememberedSpreadsheetKey, JSON.stringify(spreadsheet))
+  writeStoredString(getLocalStorage, rememberedSpreadsheetKey, JSON.stringify(spreadsheet))
 }
 
 export function forgetSpreadsheet(): void {
-  removeStoredValue(rememberedSpreadsheetKey)
+  removeStoredValue(getLocalStorage, rememberedSpreadsheetKey)
 }

@@ -28,5 +28,8 @@ export function splitByQuality(values: readonly (QualifiedCents | null | undefin
 
 // A month's total in the same shape as a pot value, so totals split the same way.
 export function totalValue(month: MonthTotal): QualifiedCents | null {
-  return month.total === null ? null : { cents: month.total, quality: month.isEstimated ? 'estimated' : 'measured' }
+  if (month.total !== null)
+    return { cents: month.total, quality: 'measured' }
+
+  return month.estimatedTotal === null ? null : { cents: month.estimatedTotal, quality: 'estimated' }
 }

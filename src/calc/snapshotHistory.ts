@@ -9,16 +9,19 @@ export interface QualifiedCents {
   quality: Quality
 }
 
+// At most one of `total`, `estimatedTotal` and `knownPart` is set; all three are null when no pot is tracked or all
+// tracked pots are unknown.
 export interface MonthTotal {
   month: Month
   isGap: boolean
-  // The sum over every tracked pot, or null when one of them is unknown or none is tracked. It may include estimated
-  // values: check `isEstimated` before treating it as measured.
+  // The sum over every tracked pot when every one of them is measured. Never includes an estimate.
   total: Cents | null
-  // When some tracked pots are unknown: the sum of the others, a lower bound rather than the total. Null otherwise.
+  // The sum over every tracked pot when it is complete only because at least one pot is estimated.
+  estimatedTotal: Cents | null
+  // When some tracked pots are unknown: the sum of the others, a lower bound rather than the total.
   knownPart: Cents | null
-  // Whether the total, or the known part, includes an estimated pot value.
-  isEstimated: boolean
+  // Whether `knownPart` includes an estimated pot value. False when `knownPart` is null.
+  knownPartIncludesEstimates: boolean
 }
 
 export interface PotGroupMonth extends MonthTotal {
@@ -133,16 +136,22 @@ function withEstimates(measured: readonly (Cents | null | undefined)[]): (Qualif
   })
 }
 
-// A total needs every part; with some unknown, the others only make a lower bound.
-function sumOfParts(parts: readonly (QualifiedCents | null)[]): Pick<MonthTotal, 'total' | 'knownPart' | 'isEstimated'> {
+type MonthSums = Pick<MonthTotal, 'total' | 'estimatedTotal' | 'knownPart' | 'knownPartIncludesEstimates'>
+
+// A total needs every part, and is measured only when every part is; with some unknown, the others only make a lower bound.
+function sumOfParts(parts: readonly (QualifiedCents | null)[]): MonthSums {
   const known = parts.filter(part => part !== null)
   const sum = known.reduce((total, part) => total + part.cents, 0) as Cents
-  const isEstimated = known.some(part => part.quality === 'estimated')
+  const includesEstimates = known.some(part => part.quality === 'estimated')
+  const sums: MonthSums = { total: null, estimatedTotal: null, knownPart: null, knownPartIncludesEstimates: false }
 
-  if (known.length === parts.length)
-    return { total: parts.length === 0 ? null : sum, knownPart: null, isEstimated }
+  if (known.length === 0)
+    return sums
 
-  return { total: null, knownPart: known.length === 0 ? null : sum, isEstimated }
+  if (known.length < parts.length)
+    return { ...sums, knownPart: sum, knownPartIncludesEstimates: includesEstimates }
+
+  return includesEstimates ? { ...sums, estimatedTotal: sum } : { ...sums, total: sum }
 }
 
 function historyMonths(ledger: HistoryInput): Month[] {

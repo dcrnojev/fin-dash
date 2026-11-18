@@ -6,9 +6,11 @@ interface IssueListProps {
   issues: readonly Issue[]
   // Links that open a tab of the spreadsheet; without one the tab name is plain text.
   tabLinks?: Readonly<Record<string, string>>
+  // Shows each issue's code instead of its message.
+  hideMessages?: boolean
 }
 
-export function IssueList({ issues, tabLinks = {} }: IssueListProps) {
+export function IssueList({ issues, tabLinks = {}, hideMessages = false }: IssueListProps) {
   return (
     <ul className="issue-list">
       {issues.map((issue, index) => {
@@ -28,7 +30,14 @@ export function IssueList({ issues, tabLinks = {} }: IssueListProps) {
               {issue.row !== null && ` · row ${issue.row}`}
               {issue.column !== null && ` · ${issue.column}`}
             </span>
-            <span className="issue-message">{issue.message}</span>
+            {hideMessages ? (
+              <span className="issue-message">
+                <code>{issue.code}</code>
+                <span className="muted"> · message hidden with the amounts</span>
+              </span>
+            ) : (
+              <span className="issue-message">{issue.message}</span>
+            )}
           </li>
         )
       })}

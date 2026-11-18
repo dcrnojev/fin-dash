@@ -37,11 +37,11 @@ describe('headlineFigures', () => {
 
     expect(figures?.month).toBe(latest)
     expect(figures?.cash.total).toBe(220_00)
-    expect(figures?.cash.versusPreviousMonth).toEqual({ since: addMonths(latest, -1), amount: 10_00, ratio: 10 / 210, isEstimated: false })
-    expect(figures?.cash.versusYearEarlier).toEqual({ since: first, amount: 120_00, ratio: 1.2, isEstimated: false })
+    expect(figures?.cash.versusPreviousMonth).toEqual({ since: addMonths(latest, -1), amount: 10_00, ratio: 10 / 210 })
+    expect(figures?.cash.versusYearEarlier).toEqual({ since: first, amount: 120_00, ratio: 1.2 })
   })
 
-  it('flags a change against an estimated gap month, and leaves out a change from before the history', () => {
+  it('keeps a change against an estimated gap month apart from measured changes, and leaves out a change from before the history', () => {
     const withoutPrevious = cashYear.filter(row => row.month !== addMonths(latest, -1))
     const gap: MonthRecord = { month: addMonths(latest, -1), status: 'gap', closedOn: null, closedBy: null, frozenPlan: null, note: null }
 
@@ -50,8 +50,9 @@ describe('headlineFigures', () => {
     )
 
     expect(figures?.cash.total).toBe(220_00)
-    expect(figures?.cash.isEstimated).toBe(false)
-    expect(figures?.cash.versusPreviousMonth).toEqual({ since: gap.month, amount: 10_00, ratio: 10 / 210, isEstimated: true })
+    expect(figures?.cash.estimatedTotal).toBeNull()
+    expect(figures?.cash.versusPreviousMonth).toBeNull()
+    expect(figures?.cash.estimatedVersusPreviousMonth).toEqual({ since: gap.month, amount: 10_00, ratio: 10 / 210 })
     expect(figures?.cash.versusYearEarlier).toBeNull()
   })
 
@@ -61,10 +62,13 @@ describe('headlineFigures', () => {
 
     expect(figures?.investments).toEqual({
       total: null,
+      estimatedTotal: null,
       knownPart: null,
-      isEstimated: false,
+      knownPartIncludesEstimates: false,
       versusPreviousMonth: null,
+      estimatedVersusPreviousMonth: null,
       versusYearEarlier: null,
+      estimatedVersusYearEarlier: null,
     })
     expect(figures?.combined.total).toBeNull()
     expect(figures?.combined.knownPart).toBe(220_00)

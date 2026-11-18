@@ -2,6 +2,7 @@ import type { SpreadsheetRef } from '../data'
 import { appSchemaVersion } from '../domain/schema/meta'
 import type { LoadedLedger } from '../ledger/loadLedger'
 import { useLedger } from '../ledger/useLedger'
+import { useHideAmounts } from '../useHideAmounts'
 import { DataHealthPanel } from './DataHealthPanel'
 import { SnapshotHistoryView } from './SnapshotHistoryView'
 
@@ -49,6 +50,7 @@ interface LoadedSpreadsheetProps {
 
 function LoadedSpreadsheet({ loaded, onReload }: LoadedSpreadsheetProps) {
   const { ledger, schema, tabLinks } = loaded
+  const [hideAmounts, setHideAmounts] = useHideAmounts()
 
   if (schema.status === 'not-set-up') {
     return (
@@ -90,8 +92,8 @@ function LoadedSpreadsheet({ loaded, onReload }: LoadedSpreadsheetProps) {
         </p>
       )}
 
-      <DataHealthPanel issues={ledger.issues} tabLinks={tabLinks} onReload={onReload} />
-      <SnapshotHistoryView ledger={ledger} />
+      <DataHealthPanel issues={ledger.issues} tabLinks={tabLinks} hideAmounts={hideAmounts} onReload={onReload} />
+      <SnapshotHistoryView ledger={ledger} hideAmounts={hideAmounts} onHideAmountsChange={setHideAmounts} />
     </>
   )
 }

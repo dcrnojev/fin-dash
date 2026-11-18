@@ -14,10 +14,13 @@ export function potValueText(value: QualifiedCents | null | undefined, hidden: b
 
 export function totalText(month: MonthTotal, hidden: boolean): string {
   if (month.total !== null)
-    return withQuality(displayEuros(month.total, hidden), month.isEstimated)
+    return displayEuros(month.total, hidden)
+
+  if (month.estimatedTotal !== null)
+    return withQuality(displayEuros(month.estimatedTotal, hidden), true)
 
   if (month.knownPart !== null)
-    return withQuality(`at least ${displayEuros(month.knownPart, hidden)}`, month.isEstimated)
+    return withQuality(`at least ${displayEuros(month.knownPart, hidden)}`, month.knownPartIncludesEstimates)
 
   return month.isGap ? 'gap' : 'unknown'
 }

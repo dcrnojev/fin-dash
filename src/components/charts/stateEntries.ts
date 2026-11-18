@@ -17,7 +17,7 @@ export function columnStateEntries(months: readonly MonthTotal[]): LegendEntry[]
 function stateEntries(months: readonly MonthTotal[], estimatedMark: SeriesMark, lowerBoundMark: SeriesMark): LegendEntry[] {
   const entries: LegendEntry[] = []
 
-  if (months.some(month => month.isEstimated))
+  if (months.some(month => month.estimatedTotal !== null || month.knownPartIncludesEstimates))
     entries.push({ key: 'estimated', label: 'Estimated', color: stateColor, mark: estimatedMark })
 
   if (months.some(month => month.knownPart !== null))

@@ -1,6 +1,5 @@
-import { bundleToTabs } from '../domain/schema/bundleTabs'
+import { roundTripBundle, type BundleRoundTrip } from '../domain/schema/roundTripBundle'
 import type { CellValue } from '../domain/schema/tabSpec'
-import { readLedger } from '../domain/schema/readLedger'
 import type { Bundle, Ledger, Month, TabName } from '../domain/types'
 
 export interface ImportCheck {
@@ -30,15 +29,15 @@ export function checkImportFile(fileText: string): ImportCheckResult {
   if (!looksLikeBundle(parsed))
     return { check: null, problem: 'The file is JSON but not an import bundle. Choose the bundle.json written by npm run import.' }
 
-  let tabs: Record<TabName, CellValue[][]>
+  let roundTrip: BundleRoundTrip
 
   try {
-    tabs = bundleToTabs(parsed)
+    roundTrip = roundTripBundle(parsed)
   } catch (error) {
     return { check: null, problem: `The bundle could not be turned into tabs: ${error instanceof Error ? error.message : String(error)}` }
   }
 
-  const ledger = readLedger(tabs)
+  const { tabs, ledger } = roundTrip
   // 'YYYY-MM' text sorts in time order.
   const months = [...ledger.months.keys(), ...ledger.snapshots.map(snapshot => snapshot.month)].sort()
 

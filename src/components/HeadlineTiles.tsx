@@ -23,8 +23,18 @@ export function HeadlineTiles({ figures, hideAmounts }: HeadlineTilesProps) {
           <li key={tile.label} className="tile">
             <span className="tile-label">{tile.label}</span>
             <TileValue figure={tile.figure} hideAmounts={hideAmounts} />
-            <ChangeLine change={tile.figure.versusPreviousMonth} since={addMonths(figures.month, -1)} hideAmounts={hideAmounts} />
-            <ChangeLine change={tile.figure.versusYearEarlier} since={addMonths(figures.month, -12)} hideAmounts={hideAmounts} />
+            <ChangeLine
+              measured={tile.figure.versusPreviousMonth}
+              estimated={tile.figure.estimatedVersusPreviousMonth}
+              since={addMonths(figures.month, -1)}
+              hideAmounts={hideAmounts}
+            />
+            <ChangeLine
+              measured={tile.figure.versusYearEarlier}
+              estimated={tile.figure.estimatedVersusYearEarlier}
+              since={addMonths(figures.month, -12)}
+              hideAmounts={hideAmounts}
+            />
           </li>
         ))}
       </ul>
@@ -33,12 +43,15 @@ export function HeadlineTiles({ figures, hideAmounts }: HeadlineTilesProps) {
 }
 
 function TileValue({ figure, hideAmounts }: { figure: HeadlineFigure; hideAmounts: boolean }) {
-  const estimatedNote = figure.isEstimated && <span className="tile-note">Estimated: some pots have no snapshot this month.</span>
+  const estimatedNote = <span className="tile-note">Estimated: some pots have no snapshot this month.</span>
 
-  if (figure.total !== null) {
+  if (figure.total !== null)
+    return <span className="tile-value">{displayEuros(figure.total, hideAmounts)}</span>
+
+  if (figure.estimatedTotal !== null) {
     return (
       <span className="tile-value">
-        {displayEuros(figure.total, hideAmounts)}
+        {displayEuros(figure.estimatedTotal, hideAmounts)}
         {estimatedNote}
       </span>
     )
@@ -50,7 +63,7 @@ function TileValue({ figure, hideAmounts }: { figure: HeadlineFigure; hideAmount
         <span className="tile-qualifier">at least </span>
         {displayEuros(figure.knownPart, hideAmounts)}
         <span className="tile-note">A pot has no snapshot this month and cannot be estimated.</span>
-        {estimatedNote}
+        {figure.knownPartIncludesEstimates && estimatedNote}
       </span>
     )
   }
@@ -58,18 +71,28 @@ function TileValue({ figure, hideAmounts }: { figure: HeadlineFigure; hideAmount
   return <span className="tile-value muted">unknown</span>
 }
 
-function ChangeLine({ change, since, hideAmounts }: { change: Change | null; since: Month; hideAmounts: boolean }) {
+interface ChangeLineProps {
+  // At most one of the two is set.
+  measured: Change | null
+  estimated: Change | null
+  since: Month
+  hideAmounts: boolean
+}
+
+function ChangeLine({ measured, estimated, since, hideAmounts }: ChangeLineProps) {
+  const change = measured ?? estimated
+
   if (change === null)
     return <span className="tile-change muted">vs {displayMonth(since)}: no complete figure</span>
 
   const direction = change.amount > 0 ? 'up' : change.amount < 0 ? 'down' : 'flat'
-  const percent = change.ratio === null ? '' : ` (${displaySignedPercent(change.ratio)})`
+  const percent = change.ratio === null ? '' : ` (${displaySignedPercent(change.ratio, hideAmounts)})`
 
   return (
     <span className={`tile-change change-${direction}`}>
       vs {displayMonth(since)}: {displaySignedEuros(change.amount, hideAmounts)}
       {percent}
-      {change.isEstimated && ' (estimated)'}
+      {estimated !== null && ' (estimated)'}
     </span>
   )
 }

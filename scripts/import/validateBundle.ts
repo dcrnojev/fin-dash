@@ -1,5 +1,4 @@
-import { bundleToTabs } from '../../src/domain/schema/bundleTabs.ts'
-import { readLedger } from '../../src/domain/schema/readLedger.ts'
+import { roundTripBundle } from '../../src/domain/schema/roundTripBundle.ts'
 import type { Bundle, Issue } from '../../src/domain/types.ts'
 
 export interface BundleValidation {
@@ -9,10 +8,9 @@ export interface BundleValidation {
   rowCount: number
 }
 
-// Writes the bundle through the tab specs and reads it back with the app's validator, so the import is held to the same
-// rules as a hand-edited sheet.
+// The bundle's round trip through the tab specs and the app's validator, plus the rows it did not survive unchanged.
 export function validateBundle(bundle: Bundle): BundleValidation {
-  const ledger = readLedger(bundleToTabs(bundle))
+  const { ledger } = roundTripBundle(bundle)
   const changedRows: string[] = []
 
   const compare = <T>(tab: string, written: readonly T[], read: readonly T[]) => {

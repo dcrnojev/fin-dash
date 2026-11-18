@@ -1,7 +1,6 @@
 import { DataError, type SignedInUser } from '../types'
 import { loadOAuth2, type TokenClient, type TokenClientError, type TokenRequestOverrides, type TokenResponse } from './googleGlobals'
-import { readStoredString, removeStoredValue, writeStoredString } from '../../localStore'
-import { readSessionString, removeSessionValue, writeSessionString } from '../../sessionStore'
+import { getLocalStorage, getSessionStorage, readStoredString, removeStoredValue, writeStoredString } from '../../webStorage'
 
 export const DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file'
 
@@ -64,7 +63,7 @@ export class GoogleSession {
 
   forgetToken(): void {
     this.token = null
-    removeSessionValue(tabSessionKey)
+    removeStoredValue(getSessionStorage, tabSessionKey)
   }
 
   // Loads the Google library ahead of the first click: a sign-in window opened after a network wait counts as
@@ -86,7 +85,7 @@ export class GoogleSession {
   }
 
   rememberedEmail(): string | null {
-    return readStoredString(rememberedEmailKey)
+    return readStoredString(getLocalStorage, rememberedEmailKey)
   }
 
   async resumeSession(): Promise<SignedInUser | null> {
@@ -128,7 +127,7 @@ export class GoogleSession {
   signOut(): void {
     this.forgetToken()
     this.user = null
-    removeStoredValue(rememberedEmailKey)
+    removeStoredValue(getLocalStorage, rememberedEmailKey)
   }
 
   private acceptToken(response: TokenResponse): string {
@@ -144,7 +143,7 @@ export class GoogleSession {
     const userInfo = await fetchUserInfo(accessToken)
 
     this.user = { email: userInfo.email, name: userInfo.name ?? userInfo.email }
-    writeStoredString(rememberedEmailKey, userInfo.email)
+    writeStoredString(getLocalStorage, rememberedEmailKey, userInfo.email)
     this.keepForThisTab()
     return this.user
   }
@@ -165,7 +164,7 @@ export class GoogleSession {
 
   private keepForThisTab(): void {
     if (this.token && this.user)
-      writeSessionString(tabSessionKey, JSON.stringify({ token: this.token, user: this.user } satisfies TabSession))
+      writeStoredString(getSessionStorage, tabSessionKey, JSON.stringify({ token: this.token, user: this.user } satisfies TabSession))
   }
 
   // The token client calls back through the callbacks given to initTokenClient, not per request,
@@ -206,7 +205,7 @@ export class GoogleSession {
 }
 
 function readTabSession(): TabSession | null {
-  const stored = readSessionString(tabSessionKey)
+  const stored = readStoredString(getSessionStorage, tabSessionKey)
 
   if (!stored)
     return null

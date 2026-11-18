@@ -2,7 +2,6 @@ import { useMemo } from 'react'
 import { headlineFigures } from '../calc/headlineFigures'
 import { snapshotHistory } from '../calc/snapshotHistory'
 import type { Ledger } from '../domain/types'
-import { useHideAmounts } from '../useHideAmounts'
 import { CashChart } from './charts/CashChart'
 import { CombinedChart } from './charts/CombinedChart'
 import { InvestmentsChart } from './charts/InvestmentsChart'
@@ -10,10 +9,11 @@ import { HeadlineTiles } from './HeadlineTiles'
 
 interface SnapshotHistoryViewProps {
   ledger: Ledger
+  hideAmounts: boolean
+  onHideAmountsChange: (hide: boolean) => void
 }
 
-export function SnapshotHistoryView({ ledger }: SnapshotHistoryViewProps) {
-  const [hideAmounts, setHideAmounts] = useHideAmounts()
+export function SnapshotHistoryView({ ledger, hideAmounts, onHideAmountsChange }: SnapshotHistoryViewProps) {
   const history = useMemo(() => snapshotHistory(ledger), [ledger])
   const figures = useMemo(() => headlineFigures(history), [history])
 
@@ -22,7 +22,7 @@ export function SnapshotHistoryView({ ledger }: SnapshotHistoryViewProps) {
       <div className="history-header">
         <h2>Snapshot history</h2>
         <label className="toggle">
-          <input type="checkbox" checked={hideAmounts} onChange={event => setHideAmounts(event.target.checked)} />
+          <input type="checkbox" checked={hideAmounts} onChange={event => onHideAmountsChange(event.target.checked)} />
           Hide amounts
         </label>
       </div>
