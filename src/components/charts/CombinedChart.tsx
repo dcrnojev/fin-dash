@@ -3,7 +3,6 @@ import type { MonthTotal } from '../../calc/snapshotHistory'
 import { ChartCard } from './ChartCard'
 import { chartMargin, euroAxisProps, gridProps } from './chartChrome'
 import type { ChartSeries } from './chartSeries'
-import { GapBands } from './GapBands'
 import { IsolatedPointDot } from './IsolatedPointDot'
 import { MeasuredAndEstimatedLine } from './MeasuredAndEstimatedLine'
 import { monthAt, monthAxisProps } from './monthAxis'
@@ -46,7 +45,6 @@ export function CombinedChart({ months, hideAmounts }: CombinedChartProps) {
           <CartesianGrid {...gridProps} />
           <XAxis {...monthAxisProps(months)} />
           <YAxis {...euroAxisProps(hideAmounts)} />
-          <GapBands months={months} />
           <Tooltip
             content={({ label }) => <MonthTooltip month={monthAt(label, months)} series={series} />}
             cursor={{ stroke: 'var(--chart-axis)' }}

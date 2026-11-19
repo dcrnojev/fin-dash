@@ -86,7 +86,7 @@ function ChangeLine({ measured, estimated, since, hideAmounts }: ChangeLineProps
     return <span className="tile-change muted">vs {displayMonth(since)}: no complete figure</span>
 
   const direction = change.amount > 0 ? 'up' : change.amount < 0 ? 'down' : 'flat'
-  const percent = change.ratio === null ? '' : ` (${displaySignedPercent(change.ratio, hideAmounts)})`
+  const percent = change.ratio === null ? '' : ` (${displaySignedPercent(change.ratio)})`
 
   return (
     <span className={`tile-change change-${direction}`}>

@@ -9,7 +9,6 @@ const shortMonth = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'num
 
 // Shown in place of every euro figure while amounts are hidden.
 export const hiddenEuros = '••• €'
-const hiddenPercent = '••• %'
 
 export function displayEuros(cents: Cents, hidden: boolean): string {
   return hidden ? hiddenEuros : euros.format(centsToEuros(cents))
@@ -24,8 +23,9 @@ export function displayWholeEuros(cents: number, hidden: boolean): string {
   return hidden ? '•••' : wholeEuros.format(cents / 100)
 }
 
-export function displaySignedPercent(ratio: number, hidden: boolean): string {
-  return hidden ? hiddenPercent : signedPercent.format(ratio)
+// Shown even while amounts are hidden: a rate of change reveals no balance.
+export function displaySignedPercent(ratio: number): string {
+  return signedPercent.format(ratio)
 }
 
 export function displayMonth(month: Month): string {

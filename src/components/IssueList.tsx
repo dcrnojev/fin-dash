@@ -6,7 +6,7 @@ interface IssueListProps {
   issues: readonly Issue[]
   // Links that open a tab of the spreadsheet; without one the tab name is plain text.
   tabLinks?: Readonly<Record<string, string>>
-  // Shows each issue's code instead of its message.
+  // Shows each issue's code instead of its message; scrubbing digits out of messages would leak any amount phrased otherwise.
   hideMessages?: boolean
 }
 

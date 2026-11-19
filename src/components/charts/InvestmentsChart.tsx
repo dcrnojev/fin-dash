@@ -4,7 +4,6 @@ import type { PotId } from '../../domain/types'
 import { ChartCard } from './ChartCard'
 import { chartMargin, euroAxisProps, gridProps } from './chartChrome'
 import type { ChartSeries } from './chartSeries'
-import { GapBands } from './GapBands'
 import { monthAt, monthAxisProps } from './monthAxis'
 import { MonthTooltip } from './MonthTooltip'
 import { seriesColor } from './seriesColor'
@@ -64,10 +63,9 @@ export function InvestmentsChart({ history, hideAmounts }: InvestmentsChartProps
           <CartesianGrid {...gridProps} />
           <XAxis {...monthAxisProps(months)} />
           <YAxis {...euroAxisProps(hideAmounts)} />
-          <GapBands months={months} />
           <Tooltip
             content={({ label }) => <MonthTooltip month={monthAt(label, months)} series={series} />}
-            cursor={{ fill: 'var(--chart-gap)' }}
+            cursor={{ fill: 'var(--chart-hover)' }}
             isAnimationActive={false}
           />
 

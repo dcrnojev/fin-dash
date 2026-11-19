@@ -3,13 +3,7 @@ import { monthFromIndex, monthIndex } from '../../domain/month'
 import { displayMonth } from '../../format'
 import { axisTick } from './chartChrome'
 
-export interface MonthRun {
-  first: number
-  last: number
-}
-
-// The x axis is numeric (the month index), so a month owns the band from index - 0.5 to index + 0.5. That lets gap
-// months be shaded as whole bands on line and bar charts alike.
+// The x axis is numeric (the month index), and a month owns the band from index - 0.5 to index + 0.5.
 export function monthAxisProps(months: readonly MonthTotal[]) {
   const indexes = months.map(entry => monthIndex(entry.month))
 
@@ -28,25 +22,6 @@ export function monthAxisProps(months: readonly MonthTotal[]) {
 // The month under the tooltip: Recharts passes the x value, here a month index.
 export function monthAt<T extends MonthTotal>(xValue: unknown, months: readonly T[]): T | null {
   return months.find(entry => monthIndex(entry.month) === xValue) ?? null
-}
-
-export function gapRuns(months: readonly MonthTotal[]): MonthRun[] {
-  const runs: MonthRun[] = []
-
-  for (const entry of months) {
-    if (!entry.isGap)
-      continue
-
-    const index = monthIndex(entry.month)
-    const previousRun = runs.at(-1)
-
-    if (previousRun && previousRun.last === index - 1)
-      previousRun.last = index
-    else
-      runs.push({ first: index, last: index })
-  }
-
-  return runs
 }
 
 // Each January when the history spans two of them or more, otherwise every third month.
