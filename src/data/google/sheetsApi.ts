@@ -1,4 +1,13 @@
-import { DataError, type CellValue, type SpreadsheetRef, type SpreadsheetTabs, type TabLayout, type TabRows } from '../types'
+import {
+  DataError,
+  type CellUpdate,
+  type CellValue,
+  type SpreadsheetRef,
+  type SpreadsheetTabs,
+  type TabLayout,
+  type TabRows,
+} from '../types'
+import { a1Cell } from './a1Cell'
 import type { GoogleSession } from './googleSession'
 import { tabFormatRequests } from './tabFormatRequests'
 
@@ -38,6 +47,16 @@ export class SheetsApi {
 
   constructor(session: GoogleSession) {
     this.session = session
+  }
+
+  async appendRows(spreadsheetId: string, tab: string, rows: readonly CellValue[][]): Promise<void> {
+    const range = encodeURIComponent(`${quoteTabName(tab)}!A1`)
+    const query = new URLSearchParams({ valueInputOption: 'RAW', insertDataOption: 'INSERT_ROWS' })
+
+    await this.send(`${this.spreadsheetUrl(spreadsheetId)}/values/${range}:append?${query}`, {
+      method: 'POST',
+      body: JSON.stringify({ majorDimension: 'ROWS', values: rows }),
+    })
   }
 
   async createSpreadsheet(title: string, tabNames: readonly string[]): Promise<SpreadsheetRef> {
@@ -100,6 +119,19 @@ export class SheetsApi {
     })
 
     return { spreadsheet, values, tabLinks }
+  }
+
+  async updateCells(spreadsheetId: string, updates: readonly CellUpdate[]): Promise<void> {
+    const data = updates.map(update => ({
+      range: `${quoteTabName(update.tab)}!${a1Cell(update.row, update.column)}`,
+      majorDimension: 'ROWS',
+      values: [[update.value]],
+    }))
+
+    await this.send(`${this.spreadsheetUrl(spreadsheetId)}/values:batchUpdate`, {
+      method: 'POST',
+      body: JSON.stringify({ valueInputOption: 'RAW', data }),
+    })
   }
 
   async writeTabs(spreadsheetId: string, tabs: readonly TabRows[]): Promise<void> {

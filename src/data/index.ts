@@ -6,6 +6,7 @@ export const dataStore: DataStore = createGoogleDataStore()
 
 export { DataError } from './types'
 export type {
+  CellUpdate,
   CellValue,
   ColumnFormat,
   DataErrorKind,

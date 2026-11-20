@@ -101,7 +101,7 @@ export default function App() {
 
       {session.status === 'signed-in' ? (
         spreadsheet ? (
-          <SpreadsheetScreen key={spreadsheet.id} spreadsheet={spreadsheet} onForget={clearSpreadsheet} />
+          <SpreadsheetScreen key={spreadsheet.id} spreadsheet={spreadsheet} user={session.user} onForget={clearSpreadsheet} />
         ) : (
           <SetupScreen
             creating={creatingSpreadsheet}

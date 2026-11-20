@@ -34,7 +34,16 @@ function snapshot(month: string, potId: string, cents: number, holding: string |
 }
 
 function holding(id: string, potId: string, closed: string | null = null): Holding {
-  return { id: id as HoldingId, pot: potId as PotId, label: id, code: null, opened: null, closed: closed as Month | null, note: null }
+  return {
+    id: id as HoldingId,
+    pot: potId as PotId,
+    label: id,
+    owner: 'household',
+    code: null,
+    opened: null,
+    closed: closed as Month | null,
+    note: null,
+  }
 }
 
 function monthRecords(...records: [string, MonthRecord['status']][]): Map<Month, MonthRecord> {

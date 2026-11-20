@@ -35,3 +35,11 @@ export function isoDateToSerial(date: IsoDate): number {
 export function daysBetween(from: IsoDate, to: IsoDate): number {
   return (Date.parse(to) - Date.parse(from)) / millisecondsPerDay
 }
+
+// The calendar date of `date` where the code runs, not in UTC.
+export function localIsoDate(date: Date): IsoDate {
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+
+  return `${date.getFullYear()}-${month}-${day}` as IsoDate
+}

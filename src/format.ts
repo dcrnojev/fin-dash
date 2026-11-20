@@ -31,3 +31,8 @@ export function displaySignedPercent(ratio: number): string {
 export function displayMonth(month: Month): string {
   return shortMonth.format(new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1, 1)))
 }
+
+// '1 row', '3 rows': for nouns whose plural adds an s.
+export function countOf(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? '' : 's'}`
+}

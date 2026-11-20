@@ -44,3 +44,11 @@ export function monthsFromTo(first: Month, last: Month): Month[] {
 
   return months
 }
+
+// Open from its opened month through its closed month; a blank end is open on that side.
+export function isOpenInMonth(span: { opened: Month | null; closed: Month | null }, month: Month): boolean {
+  const opened = span.opened === null || monthIndex(span.opened) <= monthIndex(month)
+  const notClosed = span.closed === null || monthIndex(month) <= monthIndex(span.closed)
+
+  return opened && notClosed
+}

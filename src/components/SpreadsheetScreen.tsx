@@ -1,19 +1,48 @@
-import type { SpreadsheetRef } from '../data'
+import { useState } from 'react'
+import { editableMonths } from '../close/editableMonths'
+import { nextMonthToClose } from '../close/nextMonthToClose'
+import type { SignedInUser, SpreadsheetRef } from '../data'
 import { appSchemaVersion } from '../domain/schema/meta'
+import type { Month } from '../domain/types'
+import { displayMonth } from '../format'
 import type { LoadedLedger } from '../ledger/loadLedger'
 import { useLedger } from '../ledger/useLedger'
 import { useHideAmounts } from '../useHideAmounts'
+import { CloseMonthScreen } from './close/CloseMonthScreen'
+import { EditMonthPicker } from './close/EditMonthPicker'
+import { EditMonthScreen } from './close/EditMonthScreen'
 import { DataHealthPanel } from './DataHealthPanel'
+import { PotsScreen } from './pots/PotsScreen'
 import { SnapshotHistoryView } from './SnapshotHistoryView'
+
+type SpreadsheetView = { screen: 'dashboard' } | { screen: 'pots' } | { screen: 'close' } | { screen: 'edit'; month: Month }
+
+const dashboard: SpreadsheetView = { screen: 'dashboard' }
 
 interface SpreadsheetScreenProps {
   spreadsheet: SpreadsheetRef
+  user: SignedInUser
   onForget: () => void
 }
 
-export function SpreadsheetScreen({ spreadsheet, onForget }: SpreadsheetScreenProps) {
+// The view and the message about the last write live here rather than below, because reloading the ledger after a
+// write unmounts everything that shows it.
+export function SpreadsheetScreen({ spreadsheet, user, onForget }: SpreadsheetScreenProps) {
   const { state, reload } = useLedger(spreadsheet.id)
+  const [view, setView] = useState<SpreadsheetView>(dashboard)
+  const [writtenMessage, setWrittenMessage] = useState<string | null>(null)
   const name = state.status === 'loaded' ? state.loaded.spreadsheet.name : spreadsheet.name
+
+  function show(nextView: SpreadsheetView) {
+    setWrittenMessage(null)
+    setView(nextView)
+  }
+
+  function showWritten(message: string, nextView: SpreadsheetView) {
+    setWrittenMessage(message)
+    setView(nextView)
+    reload()
+  }
 
   return (
     <>
@@ -23,6 +52,15 @@ export function SpreadsheetScreen({ spreadsheet, onForget }: SpreadsheetScreenPr
           Forget this spreadsheet on this device
         </button>
       </p>
+
+      {writtenMessage && (
+        <div className="success-message" role="status">
+          <p>{writtenMessage}</p>
+          <button type="button" className="link-button" onClick={() => setWrittenMessage(null)}>
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {state.status === 'loading' && <p className="panel muted">Reading the spreadsheet...</p>}
 
@@ -38,18 +76,31 @@ export function SpreadsheetScreen({ spreadsheet, onForget }: SpreadsheetScreenPr
         </section>
       )}
 
-      {state.status === 'loaded' && <LoadedSpreadsheet loaded={state.loaded} onReload={reload} />}
+      {state.status === 'loaded' && (
+        <LoadedSpreadsheet
+          loaded={state.loaded}
+          user={user}
+          view={view}
+          onShow={show}
+          onWritten={showWritten}
+          onReload={reload}
+        />
+      )}
     </>
   )
 }
 
 interface LoadedSpreadsheetProps {
   loaded: LoadedLedger
+  user: SignedInUser
+  view: SpreadsheetView
+  onShow: (view: SpreadsheetView) => void
+  onWritten: (message: string, nextView: SpreadsheetView) => void
   onReload: () => void
 }
 
-function LoadedSpreadsheet({ loaded, onReload }: LoadedSpreadsheetProps) {
-  const { ledger, schema, tabLinks } = loaded
+function LoadedSpreadsheet({ loaded, user, view, onShow, onWritten, onReload }: LoadedSpreadsheetProps) {
+  const { spreadsheet, ledger, schema, tabLinks } = loaded
   const [hideAmounts, setHideAmounts] = useHideAmounts()
 
   if (schema.status === 'not-set-up') {
@@ -77,6 +128,50 @@ function LoadedSpreadsheet({ loaded, onReload }: LoadedSpreadsheetProps) {
     )
   }
 
+  // A spreadsheet the app shows read-only offers no way to change it.
+  const canWrite = schema.status === 'ok'
+  const monthToClose = nextMonthToClose(ledger)
+
+  if (canWrite && view.screen === 'pots') {
+    return (
+      <PotsScreen
+        ledger={ledger}
+        spreadsheetId={spreadsheet.id}
+        tabLinks={tabLinks}
+        monthToClose={monthToClose}
+        onAdded={message => onWritten(message, view)}
+        onBack={() => onShow(dashboard)}
+      />
+    )
+  }
+
+  if (canWrite && view.screen === 'close' && monthToClose !== null) {
+    return (
+      <CloseMonthScreen
+        ledger={ledger}
+        month={monthToClose}
+        spreadsheetId={spreadsheet.id}
+        closedBy={user.email}
+        onClosed={message => onWritten(message, dashboard)}
+        onBack={() => onShow(dashboard)}
+        onReread={onReload}
+      />
+    )
+  }
+
+  if (canWrite && view.screen === 'edit') {
+    return (
+      <EditMonthScreen
+        ledger={ledger}
+        month={view.month}
+        spreadsheetId={spreadsheet.id}
+        onEdited={message => onWritten(message, dashboard)}
+        onBack={() => onShow(dashboard)}
+        onReread={onReload}
+      />
+    )
+  }
+
   return (
     <>
       {schema.status === 'newer' && (
@@ -90,6 +185,20 @@ function LoadedSpreadsheet({ loaded, onReload }: LoadedSpreadsheetProps) {
         <p className="notice" role="status">
           The <code>_meta</code> tab could not be read; see Data health. The figures below are shown read-only.
         </p>
+      )}
+
+      {canWrite && (
+        <nav className="button-row" aria-label="Spreadsheet">
+          {monthToClose !== null && (
+            <button type="button" className="primary-button" onClick={() => onShow({ screen: 'close' })}>
+              Close {displayMonth(monthToClose)}
+            </button>
+          )}
+          <button type="button" onClick={() => onShow({ screen: 'pots' })}>
+            Pots and holdings
+          </button>
+          <EditMonthPicker months={editableMonths(ledger.months)} onEdit={month => onShow({ screen: 'edit', month })} />
+        </nav>
       )}
 
       <DataHealthPanel issues={ledger.issues} tabLinks={tabLinks} hideAmounts={hideAmounts} onReload={onReload} />

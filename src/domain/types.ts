@@ -86,6 +86,7 @@ export interface Holding {
   id: HoldingId
   pot: PotId
   label: string
+  owner: OwnerId
   code: string | null
   opened: Month | null
   closed: Month | null

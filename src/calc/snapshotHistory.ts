@@ -1,4 +1,4 @@
-import { monthIndex, monthsFromTo } from '../domain/month.ts'
+import { isOpenInMonth, monthIndex, monthsFromTo } from '../domain/month.ts'
 import type { Cents, Holding, HoldingId, Ledger, Month, Pot, PotId, PotKind } from '../domain/types.ts'
 
 // measured: from a snapshot row. estimated: interpolated for display only; never written back and never a measurement.
@@ -40,6 +40,8 @@ export interface PotGroupHistory {
 export interface SnapshotHistory {
   cash: PotGroupHistory
   investments: PotGroupHistory
+  // Each pension value is as of its statement date, not the month end, so pensions stay out of `combined`.
+  pensions: PotGroupHistory
   // Cash plus investments.
   combined: MonthTotal[]
 }
@@ -52,13 +54,14 @@ export function snapshotHistory(ledger: HistoryInput): SnapshotHistory {
   const gapMonths = new Set([...ledger.months.values()].filter(record => record.status === 'gap').map(record => record.month))
   const cash = potGroupHistory(ledger, 'cash', months, gapMonths)
   const investments = potGroupHistory(ledger, 'investment', months, gapMonths)
+  const pensions = potGroupHistory(ledger, 'pension', months, gapMonths)
 
   const combined = months.map((month, position): MonthTotal => {
     const potValues = [...cash.months[position].potValues.values(), ...investments.months[position].potValues.values()]
     return { month, isGap: gapMonths.has(month), ...sumOfParts(potValues) }
   })
 
-  return { cash, investments, combined }
+  return { cash, investments, pensions, combined }
 }
 
 function potGroupHistory(ledger: HistoryInput, kind: PotKind, months: Month[], gapMonths: ReadonlySet<Month>): PotGroupHistory {
@@ -98,7 +101,7 @@ function potGroupHistory(ledger: HistoryInput, kind: PotKind, months: Month[], g
   const measuredValue = (pot: Pot, month: Month): Cents | null => {
     const key = `${pot.id}|${month}`
     const holdingsWithRows = holdingsWithRowsByPotAndMonth.get(key)
-    const openHoldings = (holdingsByPot.get(pot.id) ?? []).filter(holding => isHoldingOpen(holding, month))
+    const openHoldings = (holdingsByPot.get(pot.id) ?? []).filter(holding => isOpenInMonth(holding, month))
 
     if (holdingsWithRows !== undefined && openHoldings.some(holding => !holdingsWithRows.has(holding.id)))
       return null
@@ -132,13 +135,6 @@ function potGroupHistory(ledger: HistoryInput, kind: PotKind, months: Month[], g
   })
 
   return { pots: groupPots, months: groupMonths }
-}
-
-function isHoldingOpen(holding: Holding, month: Month): boolean {
-  const opened = holding.opened === null || monthIndex(holding.opened) <= monthIndex(month)
-  const notClosed = holding.closed === null || monthIndex(month) <= monthIndex(holding.closed)
-
-  return opened && notClosed
 }
 
 // Fills each missing value on a straight line between the nearest measured values before and after it, rounded to the

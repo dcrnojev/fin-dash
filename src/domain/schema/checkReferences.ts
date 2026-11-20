@@ -32,6 +32,12 @@ export function checkReferences(tabs: ReferenceTabs, issues: Issue[]): Reference
   const potLabels = new Set<string>()
 
   const holdings = tabs.holdings.filter(holding => {
+    if (holding.owner !== householdOwner && !personIds.has(holding.owner)) {
+      const message = `Holding ${holding.id}: owner ${holding.owner} is neither a person id nor ${householdOwner}.`
+      report('error', 'holdings', null, 'owner', 'unknown-owner', message)
+      return false
+    }
+
     if (!potsById.has(holding.pot)) {
       report('error', 'holdings', null, 'pot_id', 'unknown-pot', `Holding ${holding.id}: pot ${holding.pot} does not exist.`)
       return false

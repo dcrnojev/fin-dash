@@ -16,6 +16,15 @@ export interface TabRows {
   rows: CellValue[][]
 }
 
+// One cell to overwrite: `row` is the sheet row number (the header row is 1) and `column` the position in that row,
+// counted from 0 as in the header row the tab was read with.
+export interface CellUpdate {
+  tab: string
+  row: number
+  column: number
+  value: CellValue
+}
+
 export type ColumnFormat = 'plain-text' | 'money' | 'date' | 'automatic'
 
 // How a tab looks: its header row is frozen and bold, and each column, by position, gets a format.
@@ -63,6 +72,10 @@ export interface DataStore {
   getSpreadsheet(spreadsheetId: string): Promise<SpreadsheetRef>
   // A new spreadsheet with exactly these tabs, all empty. The app can open it later without choosing it.
   createSpreadsheet(title: string, tabNames: readonly string[]): Promise<SpreadsheetRef>
+  // Adds rows after the last row of the tab, written as raw values. Each row must already be in the tab's column order.
+  appendRows(spreadsheetId: string, tab: string, rows: readonly CellValue[][]): Promise<void>
+  // Overwrites exactly these cells with raw values, all in one request; every other cell stays as it is.
+  updateCells(spreadsheetId: string, updates: readonly CellUpdate[]): Promise<void>
   // Replaces the contents from A1 of each tab, all in one request.
   writeTabs(spreadsheetId: string, tabs: readonly TabRows[]): Promise<void>
   // Reads the requested tabs in one request. Tabs the spreadsheet does not have are left out of the result.

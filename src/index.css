@@ -103,7 +103,8 @@ h3 {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
   color: inherit;
 }
@@ -122,7 +123,8 @@ button:disabled {
   opacity: 0.55;
 }
 
-input {
+input,
+select {
   min-height: 2.5rem;
   padding: 0.4rem 0.6rem;
   border: 1px solid var(--color-border);
@@ -523,4 +525,160 @@ input[type='file'] {
 
 .issue-warning .issue-severity {
   color: var(--color-warning-text);
+}
+
+.success-message {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-good-text);
+  border-radius: 0.75rem;
+  background: var(--color-surface);
+}
+
+.success-message p {
+  flex: 1 1 16rem;
+  overflow-wrap: anywhere;
+}
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.screen-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+.form-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  align-items: start;
+  gap: 1rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.field label {
+  font-weight: 600;
+}
+
+input[aria-invalid='true'] {
+  border-color: var(--color-error-border);
+}
+
+input[readonly] {
+  background: var(--color-surface);
+  color: var(--color-muted);
+}
+
+.field-error {
+  color: var(--color-error-text);
+  font-size: 0.9rem;
+}
+
+.pot-list,
+.holding-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pot-list {
+  gap: 0.75rem;
+}
+
+.pot-item {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.pot-item:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.pot-heading,
+.holding-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.holding-list {
+  gap: 0.25rem;
+  margin-top: 0.4rem;
+  padding-left: 1rem;
+  border-left: 2px solid var(--color-border);
+}
+
+.close-field {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: 0.25rem 1rem;
+}
+
+.close-hint {
+  grid-column: 1 / -1;
+  font-size: 0.85rem;
+}
+
+.close-pot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+}
+
+.close-pot legend {
+  padding: 0 0.25rem;
+  font-weight: 600;
+}
+
+/* As wide as the table, so the frame does not run on past the last column. */
+.review-scroller {
+  align-self: flex-start;
+}
+
+.review-table td,
+.review-table thead th + th {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.review-total th,
+.review-total td {
+  font-weight: 600;
+}
+
+.review-table tbody + tbody .review-total th,
+.review-table tbody + tbody .review-total td {
+  padding-top: 0.9rem;
+}
+
+.review-line {
+  padding-left: 1.4rem;
+  font-weight: 400;
+  white-space: normal;
 }

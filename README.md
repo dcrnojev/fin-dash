@@ -4,7 +4,9 @@ A family finance dashboard: a static React app that signs in with Google and rea
 Spreadsheet straight from the browser. There is no backend, and no financial data lives in this repo; it stays in Google.
 
 Today the app creates that spreadsheet from the legacy import, reads it back through the validator, and shows the month-end
-snapshot history (cash, investments, both together) with a Data health panel listing what the validator found.
+snapshot history (cash, investments, both together, and pension on its own) with a Data health panel listing what the
+validator found. It closes a month by appending that month's snapshot rows, edits the values of a month already closed,
+and adds pots and holdings.
 
 ## How it reaches Google
 
@@ -18,6 +20,10 @@ snapshot history (cash, investments, both together) with a Data health panel lis
   screen, but browsers usually block that window until the user clicks, so the page then offers "Continue as ...".
 - Every load reads all the app's tabs in one request, unformatted, so a Croatian-locale sheet still returns numbers and
   dates come back as serial numbers. The spreadsheet's id is remembered per device in `localStorage`.
+- The app never deletes a row. It appends rows, and editing a month overwrites only the `value`, `as_of` and `source`
+  cells of the rows it changes. Before writing it reads the tab again and works from that tab's header row, so a tab
+  whose columns were reordered or extended by hand gets each value under its own header. A value for a column the tab
+  lacks stops the write with a message naming the column to add.
 
 ## Local setup
 
@@ -59,6 +65,8 @@ spreadsheet; this app then shows it read-only and asks for an update.
 ## Where the logic lives
 
 - `src/domain/`: tab specs, row decoding and validation, shared with the import script.
+- `src/close/`: closing and editing a month; everything but `writeClose.ts` and `writeEdit.ts` is pure. `src/pots/`: ids and rows for new pots and
+  holdings.
 - `src/calc/`: pure functions from a validated ledger to chart series and headline figures. A month without a snapshot row
   for a pot is never zero. Between two measured months of the same pot it is estimated on a straight line, gap months
   included; before a pot's first or after its last measured month it stays unknown, and a total that needs it shows only
@@ -67,6 +75,55 @@ spreadsheet; this app then shows it read-only and asks for an update.
   calculations over a gap (spending, for one) must not read an estimated balance as a measured one.
 - `src/data/`: storage, behind the `DataStore` interface.
 - `src/components/`: React only; charts use Recharts, whose types stay inside `src/components/charts/`.
+
+## Pots and holdings
+
+- Pots belong to a platform and to the household: the app writes `household` as every new pot's `owner`. A holding
+  carries its own `owner` column (a person id, or blank or `household` for the household); spreadsheets made before
+  that column existed read as all-household, and need the column added by hand before a holding owned by a person can
+  be added.
+- "Pots and holdings" lists every pot with its holdings and adds either. The id is a slug of the label, numbered when the
+  tab already uses it (checked against a fresh read of the tab, invalid rows included). A new pot sorts last and has no
+  opened month, so earlier months can still be typed in by hand. A holding needs the month it opened, which must be the
+  next month to close or later: a holding open in a month already closed would leave that month's pot total unknown.
+- Only investment pots are entered per holding, so only they take holdings here.
+- Closing a pot or holding is done by hand for now: type its last month into `closed_month`.
+
+## Closing a month
+
+- The month to close is the one after the latest `legacy`, `gap` or `closed` row in `months`. With no such row it is
+  the earliest month that has snapshot rows but no `months` row, else the month after the latest snapshot month. A
+  month without a `months` row is open.
+- The form asks for every cash, investment and pension pot open that month, all required: one value per cash pot, one
+  per open holding of an investment pot (one for the pot when it has none open), and for a pension pot the value plus
+  the date of its statement, which must fall in the month. Fields start empty; last month's row at the same level shows
+  as a hint with a "Same as last month" button that fills the amount. A pot that changes between one pot row and
+  holding rows shows last month's total only as a hint. Amounts may be typed as `1.234,56` or `1234.56`.
+- Rows the sheet already has for the month (a close that failed midway, or typed by hand) show read-only, at the level
+  they are stored at even when the pot's holdings say otherwise, and closing keeps them as they are.
+- A review step shows the totals per kind and every value against last month before anything is written. A month can
+  be closed on any day; before its last day the review asks to confirm closing early.
+- Writing re-reads `months` and `snapshots` right before each append and stops, writing nothing more, when the month got
+  a `months` row or its snapshot rows changed since the form opened: two people must not close or edit a month at once.
+  It appends the snapshot rows (`source` `app`; cash and investments `as_of` the day of the write), then the `months`
+  row (`closed`, `closed_on` that day, `closed_by` the signed-in email), then reloads.
+- The `months` row goes last, so a close that fails midway leaves the month open; reading the sheet again and closing
+  again finishes it. A month that is already closed, or that has an `open` row typed by hand, is refused without
+  writing anything.
+- Pension: at a month's close the owner enters the statement that arrived during that month, with the statement's own
+  date as `as_of`, so a pension value is not a month-end value. Pension has its own chart and stays out of the
+  investment and combined totals.
+
+## Editing a month
+
+- "Edit a month" on the dashboard opens the same form for a `closed` or `legacy` month, filled with what the sheet has.
+  Each pot keeps the level it is stored at. A field the month has no row for may stay blank; a row cannot be blanked.
+- The review lists only the changed and added values, as the sheet has them and as they will be.
+- Saving re-reads `snapshots` and finds each changed row by its key (`month`, `pot_id`, `holding_id`). A key that is
+  missing or appears more than once, or any change to the month's rows since the form opened, stops it before anything
+  is written. It then overwrites that row's `value`, `as_of` (the day of the write, or the statement date for a
+  pension) and `source` (`app`) cells in one request, re-reads, and appends rows for added values. The `months` row is
+  never changed.
 
 ## Importing the legacy history
 

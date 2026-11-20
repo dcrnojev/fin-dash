@@ -5,6 +5,7 @@ import type { Ledger } from '../domain/types'
 import { CashChart } from './charts/CashChart'
 import { CombinedChart } from './charts/CombinedChart'
 import { InvestmentsChart } from './charts/InvestmentsChart'
+import { PensionChart } from './charts/PensionChart'
 import { HeadlineTiles } from './HeadlineTiles'
 
 interface SnapshotHistoryViewProps {
@@ -35,6 +36,7 @@ export function SnapshotHistoryView({ ledger, hideAmounts, onHideAmountsChange }
           <CashChart history={history.cash} hideAmounts={hideAmounts} />
           <InvestmentsChart history={history.investments} hideAmounts={hideAmounts} />
           <CombinedChart months={history.combined} hideAmounts={hideAmounts} />
+          {history.pensions.pots.length > 0 && <PensionChart history={history.pensions} hideAmounts={hideAmounts} />}
         </>
       )}
     </section>
