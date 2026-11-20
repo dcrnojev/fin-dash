@@ -1,4 +1,5 @@
 import { headerPositions } from './headerPositions.ts'
+import { missingColumnsMessage } from './missingColumnsMessage.ts'
 import type { Cell, CellValue, TabSpec } from './tabSpec.ts'
 
 // Rows for appending to a tab whose header row is `header`: each value lands under its column's header wherever that
@@ -11,11 +12,8 @@ export function rowsForHeader<T>(spec: TabSpec<T>, header: readonly Cell[], valu
     .map(column => column.name)
     .filter(name => !positions.has(name) && encoded.some(row => (row[name] ?? '') !== ''))
 
-  if (missingColumns.length > 0) {
-    const columns = missingColumns.length > 1 ? 'columns' : 'a column'
-    const names = missingColumns.join(' and ')
-    throw new Error(`Add ${columns} named exactly ${names} to the header row of the ${spec.name} tab; existing rows can stay blank.`)
-  }
+  if (missingColumns.length > 0)
+    throw new Error(missingColumnsMessage(spec.name, missingColumns))
 
   return encoded.map(row => {
     const cells: CellValue[] = Array.from({ length: header.length }, () => '')

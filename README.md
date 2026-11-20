@@ -6,7 +6,7 @@ Spreadsheet straight from the browser. There is no backend, and no financial dat
 Today the app creates that spreadsheet from the legacy import, reads it back through the validator, and shows the month-end
 snapshot history (cash, investments, both together, and pension on its own) with a Data health panel listing what the
 validator found. It closes a month by appending that month's snapshot rows, edits the values of a month already closed,
-and adds pots and holdings.
+and adds and edits pots and holdings.
 
 ## How it reaches Google
 
@@ -20,8 +20,8 @@ and adds pots and holdings.
   screen, but browsers usually block that window until the user clicks, so the page then offers "Continue as ...".
 - Every load reads all the app's tabs in one request, unformatted, so a Croatian-locale sheet still returns numbers and
   dates come back as serial numbers. The spreadsheet's id is remembered per device in `localStorage`.
-- The app never deletes a row. It appends rows, and editing a month overwrites only the `value`, `as_of` and `source`
-  cells of the rows it changes. Before writing it reads the tab again and works from that tab's header row, so a tab
+- The app never deletes a row. It appends rows, editing a month overwrites only the `value`, `as_of` and `source`
+  cells of the rows it changes, and editing a pot or holding overwrites only the cells of its row that change. Before writing it reads the tab again and works from that tab's header row, so a tab
   whose columns were reordered or extended by hand gets each value under its own header. A value for a column the tab
   lacks stops the write with a message naming the column to add.
 
@@ -66,7 +66,7 @@ spreadsheet; this app then shows it read-only and asks for an update.
 
 - `src/domain/`: tab specs, row decoding and validation, shared with the import script.
 - `src/close/`: closing and editing a month; everything but `writeClose.ts` and `writeEdit.ts` is pure. `src/pots/`: ids and rows for new pots and
-  holdings.
+  holdings, and edits to existing ones.
 - `src/calc/`: pure functions from a validated ledger to chart series and headline figures. A month without a snapshot row
   for a pot is never zero. Between two measured months of the same pot it is estimated on a straight line, gap months
   included; before a pot's first or after its last measured month it stays unknown, and a total that needs it shows only
@@ -78,16 +78,24 @@ spreadsheet; this app then shows it read-only and asks for an update.
 
 ## Pots and holdings
 
-- Pots belong to a platform and to the household: the app writes `household` as every new pot's `owner`. A holding
-  carries its own `owner` column (a person id, or blank or `household` for the household); spreadsheets made before
-  that column existed read as all-household, and need the column added by hand before a holding owned by a person can
-  be added.
+- A pot's `owner` is a person id or `household`: cash and pension pots usually belong to one person, investment
+  platforms to the household. A holding carries its own `owner` column (a person id, or blank or `household` for the
+  household); spreadsheets made before that column existed read as all-household, and need the column added by hand
+  before a holding can be added with, or edited to, a person as owner.
 - "Pots and holdings" lists every pot with its holdings and adds either. The id is a slug of the label, numbered when the
   tab already uses it (checked against a fresh read of the tab, invalid rows included). A new pot sorts last and has no
   opened month, so earlier months can still be typed in by hand. A holding needs the month it opened, which must be the
   next month to close or later: a holding open in a month already closed would leave that month's pot total unknown.
 - Only investment pots are entered per holding, so only they take holdings here.
-- Closing a pot or holding is done by hand for now: type its last month into `closed_month`.
+- "Edit" on a pot changes its `label`, `owner`, `provider`, `liquidity`, `closed_month` and `note`; on a holding its
+  `label`, `owner`, `code`, `closed_month` and `note`. Ids, opened months, a pot's `kind` and a holding's `pot_id` stay
+  fixed, because snapshot rows refer to them or are read by them; another kind or pot means adding a new one.
+- A closed month may be cleared, but when set it must be on or after the opened month and the latest month with a
+  snapshot or contribution row for that pot or holding, since the validator leaves out a pot's rows after it closed.
+  Labels stay unique among pots, and among the holdings of one pot.
+- A review lists each changed field as the sheet has it and as it will be. Saving re-reads the tab, finds the row by
+  `id`, and stops before writing when the id has no row or more than one, or when an editable field of that row changed
+  since the form opened. It then overwrites only the changed cells in one request and reloads.
 
 ## Closing a month
 

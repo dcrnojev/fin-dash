@@ -137,10 +137,10 @@ function LoadedSpreadsheet({ loaded, user, view, onShow, onWritten, onReload }: 
       <PotsScreen
         ledger={ledger}
         spreadsheetId={spreadsheet.id}
-        tabLinks={tabLinks}
         monthToClose={monthToClose}
-        onAdded={message => onWritten(message, view)}
+        onWritten={message => onWritten(message, view)}
         onBack={() => onShow(dashboard)}
+        onReread={onReload}
       />
     )
   }

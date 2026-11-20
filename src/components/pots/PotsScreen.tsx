@@ -6,13 +6,13 @@ import { PotList } from './PotList'
 interface PotsScreenProps {
   ledger: Ledger
   spreadsheetId: string
-  tabLinks: Readonly<Record<string, string>>
   monthToClose: Month | null
-  onAdded: (message: string) => void
+  onWritten: (message: string) => void
   onBack: () => void
+  onReread: () => void
 }
 
-export function PotsScreen({ ledger, spreadsheetId, tabLinks, monthToClose, onAdded, onBack }: PotsScreenProps) {
+export function PotsScreen({ ledger, spreadsheetId, monthToClose, onWritten, onBack, onReread }: PotsScreenProps) {
   return (
     <section className="screen">
       <div className="screen-header">
@@ -23,35 +23,23 @@ export function PotsScreen({ ledger, spreadsheetId, tabLinks, monthToClose, onAd
       </div>
 
       <p className="notice">
-        Closing a pot or a holding is done by hand in the sheet for now: type its last month into <code>closed_month</code> in
-        the <TabLink href={tabLinks.pots} name="pots" /> or <TabLink href={tabLinks.holdings} name="holdings" /> tab, then read
-        the spreadsheet again.
+        Ids, opened months, a pot's kind and a holding's pot cannot be edited, because existing snapshot rows depend on them:
+        for another kind or pot, add a new pot or holding.
       </p>
 
-      <PotList pots={ledger.pots} holdings={ledger.holdings} people={ledger.people} />
+      <PotList ledger={ledger} spreadsheetId={spreadsheetId} onSaved={onWritten} onReread={onReread} />
 
       <div className="form-columns">
-        <AddPotForm spreadsheetId={spreadsheetId} pots={ledger.pots} onAdded={onAdded} />
+        <AddPotForm spreadsheetId={spreadsheetId} pots={ledger.pots} people={ledger.people} onAdded={onWritten} />
         <AddHoldingForm
           spreadsheetId={spreadsheetId}
           pots={ledger.pots}
           holdings={ledger.holdings}
           people={ledger.people}
           monthToClose={monthToClose}
-          onAdded={onAdded}
+          onAdded={onWritten}
         />
       </div>
     </section>
-  )
-}
-
-function TabLink({ href, name }: { href: string | undefined; name: string }) {
-  if (href === undefined)
-    return <code>{name}</code>
-
-  return (
-    <a href={href} target="_blank" rel="noreferrer">
-      {name}
-    </a>
   )
 }

@@ -1,8 +1,10 @@
 import { useId, useState, type FormEvent } from 'react'
+import { householdOwner } from '../../domain/ids'
 import { potsTab } from '../../domain/schema/potsTab'
-import { liquidities, type Pot, type PotId, type PotKind } from '../../domain/types'
+import { liquidities, type OwnerId, type Person, type Pot, type PotId, type PotKind } from '../../domain/types'
 import { appendWithUnusedId } from '../../pots/appendWithUnusedId'
 import { newPot } from '../../pots/newPot'
+import { OwnerSelect } from './OwnerSelect'
 
 // Loan pots are left out until the app has something to do with them.
 const kindChoices: { kind: PotKind; label: string }[] = [
@@ -14,12 +16,14 @@ const kindChoices: { kind: PotKind; label: string }[] = [
 interface AddPotFormProps {
   spreadsheetId: string
   pots: readonly Pot[]
+  people: readonly Person[]
   onAdded: (message: string) => void
 }
 
-export function AddPotForm({ spreadsheetId, pots, onAdded }: AddPotFormProps) {
+export function AddPotForm({ spreadsheetId, pots, people, onAdded }: AddPotFormProps) {
   const [label, setLabel] = useState('')
   const [kind, setKind] = useState<PotKind>('cash')
+  const [owner, setOwner] = useState<OwnerId>(householdOwner)
   const [provider, setProvider] = useState('')
   const [liquidity, setLiquidity] = useState<Pot['liquidity']>('liquid')
   const [saving, setSaving] = useState(false)
@@ -34,8 +38,15 @@ export function AddPotForm({ spreadsheetId, pots, onAdded }: AddPotFormProps) {
   async function add(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    if (label.trim() === '') {
+    const trimmedLabel = label.trim()
+
+    if (trimmedLabel === '') {
       setProblem('Give the pot a label.')
+      return
+    }
+
+    if (pots.some(pot => pot.label === trimmedLabel)) {
+      setProblem(`Another pot is already labelled ${trimmedLabel}.`)
       return
     }
 
@@ -43,7 +54,7 @@ export function AddPotForm({ spreadsheetId, pots, onAdded }: AddPotFormProps) {
     setProblem(null)
 
     try {
-      const draft = { label, kind, provider, liquidity }
+      const draft = { label, kind, owner, provider, liquidity }
       const added = await appendWithUnusedId(spreadsheetId, potsTab, label, 'pot', id => newPot(draft, id as PotId, pots))
       onAdded(`Added the pot ${added.label} with the id ${added.id}.`)
     } catch (error) {
@@ -70,6 +81,11 @@ export function AddPotForm({ spreadsheetId, pots, onAdded }: AddPotFormProps) {
             </option>
           ))}
         </select>
+      </div>
+
+      <div className="field">
+        <label htmlFor={`${idPrefix}-owner`}>Owner</label>
+        <OwnerSelect id={`${idPrefix}-owner`} value={owner} people={people} onChange={setOwner} />
       </div>
 
       <div className="field">
