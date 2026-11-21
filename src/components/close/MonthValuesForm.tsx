@@ -46,19 +46,21 @@ export function MonthValuesForm({ form, entries, header, intro, problem, onEntry
 
       {sections.map(section => (
         <section key={section.title} className="panel">
-          <h3>{section.title}</h3>
-          {section.pots.map(closePot => (
-            <ClosePotFields
-              key={closePot.pot.id}
-              form={form}
-              closePot={closePot}
-              entries={entries}
-              errors={errors}
-              lastMonthName={lastMonthName}
-              showBlankErrors={reviewTried}
-              onChange={onEntryChange}
-            />
-          ))}
+          <h2>{section.title}</h2>
+          <div className="close-grid">
+            {section.pots.map(closePot => (
+              <ClosePotFields
+                key={closePot.pot.id}
+                form={form}
+                closePot={closePot}
+                entries={entries}
+                errors={errors}
+                lastMonthName={lastMonthName}
+                showBlankErrors={reviewTried}
+                onChange={onEntryChange}
+              />
+            ))}
+          </div>
         </section>
       ))}
 

@@ -1,6 +1,7 @@
 import { Area, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { MonthTotal } from '../../calc/snapshotHistory'
-import { ChartCard } from './ChartCard'
+import type { Month } from '../../domain/types'
+import { ChartBody, type ChartView } from './ChartBody'
 import { chartMargin, euroAxisProps, gridProps } from './chartChrome'
 import type { ChartSeries } from './chartSeries'
 import { IsolatedPointDot } from './IsolatedPointDot'
@@ -11,12 +12,18 @@ import { splitByQuality, totalValue } from './qualityLines'
 import { lineStateEntries } from './stateEntries'
 import { totalText } from './valueText'
 
+const combinedNote =
+  'Shaded where every pot is measured. A month with any estimated pot is an estimated total (≈); with a pot that cannot be ' +
+  'estimated, only the known part shows, as at least (≥). Pension is left out.'
+
 interface CombinedChartProps {
   months: MonthTotal[]
   hideAmounts: boolean
+  view: ChartView
+  editableMonths: ReadonlySet<Month>
 }
 
-export function CombinedChart({ months, hideAmounts }: CombinedChartProps) {
+export function CombinedChart({ months, hideAmounts, view, editableMonths }: CombinedChartProps) {
   const totals = months.map(totalValue)
   const measuredTotals = splitByQuality(totals).measured
   const measuredTotalByMonth = new Map(months.map((month, position) => [month.month, measuredTotals[position]]))
@@ -33,12 +40,14 @@ export function CombinedChart({ months, hideAmounts }: CombinedChartProps) {
   ]
 
   return (
-    <ChartCard
-      title="Cash and investments"
-      note="Shaded where every pot is measured. A month with any estimated pot is an estimated total."
+    <ChartBody
       months={months}
       series={series}
       stateEntries={lineStateEntries(months)}
+      view={view}
+      note={combinedNote}
+      editableMonths={editableMonths}
+      hideAmounts={hideAmounts}
     >
       <ResponsiveContainer width="100%" height={280}>
         <ComposedChart data={months} margin={chartMargin}>
@@ -80,6 +89,6 @@ export function CombinedChart({ months, hideAmounts }: CombinedChartProps) {
           />
         </ComposedChart>
       </ResponsiveContainer>
-    </ChartCard>
+    </ChartBody>
   )
 }

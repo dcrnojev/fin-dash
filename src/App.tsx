@@ -3,10 +3,12 @@ import { AccountBar } from './components/AccountBar'
 import { ErrorMessage } from './components/ErrorMessage'
 import { SetupScreen } from './components/SetupScreen'
 import { SignInPanel } from './components/SignInPanel'
+import { AppShell } from './components/shell/AppShell'
 import { SpreadsheetScreen } from './components/SpreadsheetScreen'
 import { DataError, dataStore, type SignedInUser, type SpreadsheetRef } from './data'
 import { forgetSpreadsheet, readRememberedSpreadsheet, rememberSpreadsheet } from './rememberedSpreadsheet'
 import type { CreatedSpreadsheet } from './setup/createSpreadsheetFromImport'
+import { useHideAmounts } from './useHideAmounts'
 
 type Session =
   | { status: 'resuming' }
@@ -19,6 +21,7 @@ export default function App() {
   const [spreadsheet, setSpreadsheet] = useState<SpreadsheetRef | null>(readRememberedSpreadsheet)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [creatingSpreadsheet, setCreatingSpreadsheet] = useState(false)
+  const [hideAmounts, setHideAmounts] = useHideAmounts()
 
   const showError = useCallback((error: unknown) => {
     if (error instanceof DataError && error.kind === 'cancelled')
@@ -90,28 +93,11 @@ export default function App() {
     setSpreadsheet(null)
   }
 
-  return (
-    <main className="page">
-      <header className="page-header">
-        <h1>fin-dash</h1>
-        {session.status === 'signed-in' && <AccountBar user={session.user} signOutDisabled={creatingSpreadsheet} onSignOut={signOut} />}
-      </header>
-
-      {errorMessage && <ErrorMessage message={errorMessage} onDismiss={() => setErrorMessage(null)} />}
-
-      {session.status === 'signed-in' ? (
-        spreadsheet ? (
-          <SpreadsheetScreen key={spreadsheet.id} spreadsheet={spreadsheet} user={session.user} onForget={clearSpreadsheet} />
-        ) : (
-          <SetupScreen
-            creating={creatingSpreadsheet}
-            onChosen={chooseSpreadsheet}
-            onCreated={openCreatedSpreadsheet}
-            onCreatingChange={setCreatingSpreadsheet}
-            onError={showError}
-          />
-        )
-      ) : (
+  if (session.status !== 'signed-in') {
+    return (
+      <main className="solo">
+        <p className="brand">fin-dash</p>
+        {errorMessage && <ErrorMessage message={errorMessage} onDismiss={() => setErrorMessage(null)} />}
         <SignInPanel
           setupProblem={dataStore.setupProblem}
           resuming={session.status === 'resuming'}
@@ -119,7 +105,53 @@ export default function App() {
           onSignIn={signIn}
           onUseAnotherAccount={signOut}
         />
-      )}
-    </main>
+      </main>
+    )
+  }
+
+  const account = <AccountBar user={session.user} signOutDisabled={creatingSpreadsheet} onSignOut={signOut} />
+  const appMessage = errorMessage && <ErrorMessage message={errorMessage} onDismiss={() => setErrorMessage(null)} />
+
+  const setupScreen = (
+    <SetupScreen
+      user={session.user}
+      spreadsheet={spreadsheet}
+      creating={creatingSpreadsheet}
+      onChosen={chooseSpreadsheet}
+      onCreated={openCreatedSpreadsheet}
+      onCreatingChange={setCreatingSpreadsheet}
+      onForget={clearSpreadsheet}
+      onSignOut={signOut}
+      onError={showError}
+    />
+  )
+
+  if (spreadsheet === null) {
+    return (
+      <AppShell
+        route={{ page: 'setup' }}
+        hasSpreadsheet={false}
+        summary={null}
+        account={account}
+        hideAmounts={hideAmounts}
+        onHideAmountsChange={setHideAmounts}
+      >
+        {appMessage}
+        {setupScreen}
+      </AppShell>
+    )
+  }
+
+  return (
+    <SpreadsheetScreen
+      key={spreadsheet.id}
+      spreadsheet={spreadsheet}
+      user={session.user}
+      account={account}
+      setupScreen={setupScreen}
+      appMessage={appMessage}
+      hideAmounts={hideAmounts}
+      onHideAmountsChange={setHideAmounts}
+    />
   )
 }

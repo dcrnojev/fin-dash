@@ -1,115 +1,158 @@
-import { useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { editableMonths } from '../close/editableMonths'
-import { nextMonthToClose } from '../close/nextMonthToClose'
 import type { SignedInUser, SpreadsheetRef } from '../data'
+import { localIsoDate } from '../domain/date'
 import { appSchemaVersion } from '../domain/schema/meta'
-import type { Month } from '../domain/types'
-import { displayMonth } from '../format'
+import { displayLongMonth } from '../format'
 import type { LoadedLedger } from '../ledger/loadLedger'
 import { useLedger } from '../ledger/useLedger'
-import { useHideAmounts } from '../useHideAmounts'
+import { routeHash, type Route } from '../routing/route'
+import { navigate, useRoute } from '../routing/useRoute'
 import { CloseMonthScreen } from './close/CloseMonthScreen'
-import { EditMonthPicker } from './close/EditMonthPicker'
 import { EditMonthScreen } from './close/EditMonthScreen'
-import { DataHealthPanel } from './DataHealthPanel'
+import { DataHealthScreen } from './DataHealthScreen'
+import { HomeScreen } from './home/HomeScreen'
+import { MonthsScreen } from './months/MonthsScreen'
+import { PageHeader } from './PageHeader'
 import { PotsScreen } from './pots/PotsScreen'
-import { SnapshotHistoryView } from './SnapshotHistoryView'
-
-type SpreadsheetView = { screen: 'dashboard' } | { screen: 'pots' } | { screen: 'close' } | { screen: 'edit'; month: Month }
-
-const dashboard: SpreadsheetView = { screen: 'dashboard' }
+import { AppShell } from './shell/AppShell'
+import { ledgerSummary, type LedgerSummary } from './shell/ledgerSummary'
 
 interface SpreadsheetScreenProps {
   spreadsheet: SpreadsheetRef
   user: SignedInUser
-  onForget: () => void
+  // The menu's account line, and the page behind Setup and spreadsheet, both owned by the app.
+  account: ReactNode
+  setupScreen: ReactNode
+  // A message from the app above the page, such as a failed sign-in.
+  appMessage: ReactNode
+  hideAmounts: boolean
+  onHideAmountsChange: (hide: boolean) => void
 }
 
-// The view and the message about the last write live here rather than below, because reloading the ledger after a
-// write unmounts everything that shows it.
-export function SpreadsheetScreen({ spreadsheet, user, onForget }: SpreadsheetScreenProps) {
-  const { state, reload } = useLedger(spreadsheet.id)
-  const [view, setView] = useState<SpreadsheetView>(dashboard)
-  const [writtenMessage, setWrittenMessage] = useState<string | null>(null)
-  const name = state.status === 'loaded' ? state.loaded.spreadsheet.name : spreadsheet.name
+interface WrittenMessage {
+  message: string
+  // The page the message belongs to; leaving it drops the message.
+  hash: string
+}
 
-  function show(nextView: SpreadsheetView) {
-    setWrittenMessage(null)
-    setView(nextView)
+// The message about the last write lives here rather than below, because reloading the ledger after a write unmounts
+// everything that shows it.
+export function SpreadsheetScreen({
+  spreadsheet,
+  user,
+  account,
+  setupScreen,
+  appMessage,
+  hideAmounts,
+  onHideAmountsChange,
+}: SpreadsheetScreenProps) {
+  const { state, reload } = useLedger(spreadsheet.id)
+  const route = useRoute()
+  const hash = routeHash(route)
+  const [written, setWritten] = useState<WrittenMessage | null>(null)
+  const [messageHash, setMessageHash] = useState(hash)
+
+  // Moving to another page drops the message, unless the write itself moved there.
+  if (hash !== messageHash) {
+    setMessageHash(hash)
+
+    if (written !== null && written.hash !== hash)
+      setWritten(null)
   }
 
-  function showWritten(message: string, nextView: SpreadsheetView) {
-    setWrittenMessage(message)
-    setView(nextView)
+  // The day the page opened, which decides whether the month to close is due.
+  const [today] = useState(() => localIsoDate(new Date()))
+  const loaded = state.status === 'loaded' ? state.loaded : null
+
+  const summary = useMemo(
+    () => (loaded === null ? null : ledgerSummary(loaded.ledger, loaded.schema.status === 'ok', today)),
+    [loaded, today]
+  )
+
+  function showWritten(message: string, nextRoute: Route) {
+    setWritten({ message, hash: routeHash(nextRoute) })
+    navigate(nextRoute)
     reload()
   }
 
   return (
-    <>
-      <p className="spreadsheet-line muted">
-        Using <strong>{name}</strong> ·{' '}
-        <button type="button" className="link-button" onClick={onForget}>
-          Forget this spreadsheet on this device
-        </button>
-      </p>
+    <AppShell
+      route={route}
+      hasSpreadsheet
+      summary={summary}
+      account={account}
+      hideAmounts={hideAmounts}
+      onHideAmountsChange={onHideAmountsChange}
+    >
+      {appMessage}
 
-      {writtenMessage && (
+      {written !== null && written.hash === hash && (
         <div className="success-message" role="status">
-          <p>{writtenMessage}</p>
-          <button type="button" className="link-button" onClick={() => setWrittenMessage(null)}>
+          <p>{written.message}</p>
+          <button type="button" className="link-button" onClick={() => setWritten(null)}>
             Dismiss
           </button>
         </div>
       )}
 
-      {state.status === 'loading' && <p className="panel muted">Reading the spreadsheet...</p>}
+      {route.page === 'setup' ? (
+        setupScreen
+      ) : (
+        <>
+          {state.status === 'loading' && <p className="card card-padded muted">Reading the spreadsheet...</p>}
 
-      {state.status === 'failed' && (
-        <section className="panel">
-          <h2>Could not read the spreadsheet</h2>
-          <p>{state.message}</p>
-          <div className="button-row">
-            <button type="button" onClick={reload}>
-              Try again
-            </button>
-          </div>
-        </section>
-      )}
+          {state.status === 'failed' && (
+            <section className="card card-padded">
+              <h2>Could not read the spreadsheet</h2>
+              <p>{state.message}</p>
+              <div className="button-row">
+                <button type="button" onClick={reload}>
+                  Try again
+                </button>
+              </div>
+            </section>
+          )}
 
-      {state.status === 'loaded' && (
-        <LoadedSpreadsheet
-          loaded={state.loaded}
-          user={user}
-          view={view}
-          onShow={show}
-          onWritten={showWritten}
-          onReload={reload}
-        />
+          {loaded !== null && summary !== null && (
+            <LoadedSpreadsheet
+              loaded={loaded}
+              summary={summary}
+              route={route}
+              user={user}
+              hideAmounts={hideAmounts}
+              onWritten={showWritten}
+              onReload={reload}
+            />
+          )}
+        </>
       )}
-    </>
+    </AppShell>
   )
 }
 
 interface LoadedSpreadsheetProps {
   loaded: LoadedLedger
+  summary: LedgerSummary
+  // Setup and spreadsheet shows without the ledger.
+  route: Exclude<Route, { page: 'setup' }>
   user: SignedInUser
-  view: SpreadsheetView
-  onShow: (view: SpreadsheetView) => void
-  onWritten: (message: string, nextView: SpreadsheetView) => void
+  hideAmounts: boolean
+  onWritten: (message: string, nextRoute: Route) => void
   onReload: () => void
 }
 
-function LoadedSpreadsheet({ loaded, user, view, onShow, onWritten, onReload }: LoadedSpreadsheetProps) {
+function LoadedSpreadsheet({ loaded, summary, route, user, hideAmounts, onWritten, onReload }: LoadedSpreadsheetProps) {
   const { spreadsheet, ledger, schema, tabLinks } = loaded
-  const [hideAmounts, setHideAmounts] = useHideAmounts()
+  const { monthToClose, canWrite } = summary
 
   if (schema.status === 'not-set-up') {
     return (
-      <section className="panel">
+      <section className="card card-padded">
         <h2>Not a fin-dash spreadsheet</h2>
         <p>
-          This spreadsheet has no <code>_meta</code> tab, so the app did not create it. Forget it and choose another one, or
-          create one from the import.
+          This spreadsheet has no <code>_meta</code> tab, so the app did not create it. Forget it under Setup and spreadsheet
+          and choose another one, or create one from the import.
         </p>
       </section>
     )
@@ -117,7 +160,7 @@ function LoadedSpreadsheet({ loaded, user, view, onShow, onWritten, onReload }: 
 
   if (schema.status === 'setup-unfinished') {
     return (
-      <section className="panel">
+      <section className="card card-padded">
         <h2>Setup did not finish</h2>
         <p>
           The <code>_meta</code> tab has no <code>schema_version</code>, which the app writes last when it creates a
@@ -128,51 +171,7 @@ function LoadedSpreadsheet({ loaded, user, view, onShow, onWritten, onReload }: 
     )
   }
 
-  // A spreadsheet the app shows read-only offers no way to change it.
-  const canWrite = schema.status === 'ok'
-  const monthToClose = nextMonthToClose(ledger)
-
-  if (canWrite && view.screen === 'pots') {
-    return (
-      <PotsScreen
-        ledger={ledger}
-        spreadsheetId={spreadsheet.id}
-        monthToClose={monthToClose}
-        onWritten={message => onWritten(message, view)}
-        onBack={() => onShow(dashboard)}
-        onReread={onReload}
-      />
-    )
-  }
-
-  if (canWrite && view.screen === 'close' && monthToClose !== null) {
-    return (
-      <CloseMonthScreen
-        ledger={ledger}
-        month={monthToClose}
-        spreadsheetId={spreadsheet.id}
-        closedBy={user.email}
-        onClosed={message => onWritten(message, dashboard)}
-        onBack={() => onShow(dashboard)}
-        onReread={onReload}
-      />
-    )
-  }
-
-  if (canWrite && view.screen === 'edit') {
-    return (
-      <EditMonthScreen
-        ledger={ledger}
-        month={view.month}
-        spreadsheetId={spreadsheet.id}
-        onEdited={message => onWritten(message, dashboard)}
-        onBack={() => onShow(dashboard)}
-        onReread={onReload}
-      />
-    )
-  }
-
-  return (
+  const readOnlyNotice = (
     <>
       {schema.status === 'newer' && (
         <p className="notice" role="status">
@@ -183,26 +182,102 @@ function LoadedSpreadsheet({ loaded, user, view, onShow, onWritten, onReload }: 
 
       {schema.status === 'invalid-meta' && (
         <p className="notice" role="status">
-          The <code>_meta</code> tab could not be read; see Data health. The figures below are shown read-only.
+          The <code>_meta</code> tab could not be read; see Data health. The figures are shown read-only.
         </p>
       )}
+    </>
+  )
 
-      {canWrite && (
-        <nav className="button-row" aria-label="Spreadsheet">
-          {monthToClose !== null && (
-            <button type="button" className="primary-button" onClick={() => onShow({ screen: 'close' })}>
-              Close {displayMonth(monthToClose)}
-            </button>
-          )}
-          <button type="button" onClick={() => onShow({ screen: 'pots' })}>
-            Pots and holdings
-          </button>
-          <EditMonthPicker months={editableMonths(ledger.months)} onEdit={month => onShow({ screen: 'edit', month })} />
-        </nav>
-      )}
+  const backHome = () => navigate({ page: 'home' })
 
-      <DataHealthPanel issues={ledger.issues} tabLinks={tabLinks} hideAmounts={hideAmounts} onReload={onReload} />
-      <SnapshotHistoryView ledger={ledger} hideAmounts={hideAmounts} onHideAmountsChange={setHideAmounts} />
+  switch (route.page) {
+    case 'home':
+      return (
+        <>
+          {readOnlyNotice}
+          <HomeScreen ledger={ledger} monthToClose={monthToClose} canWrite={canWrite} hideAmounts={hideAmounts} />
+        </>
+      )
+
+    case 'months':
+      return (
+        <>
+          {readOnlyNotice}
+          <MonthsScreen ledger={ledger} monthToClose={monthToClose} canWrite={canWrite} hideAmounts={hideAmounts} />
+        </>
+      )
+
+    case 'health':
+      return <DataHealthScreen issues={ledger.issues} tabLinks={tabLinks} hideAmounts={hideAmounts} onReload={onReload} />
+
+    case 'close':
+      if (!canWrite || monthToClose === null) {
+        const reason = canWrite ? 'The spreadsheet has no snapshots yet, so there is no month to close.' : ''
+        return <Unavailable title="Close a month" notice={readOnlyNotice} reason={reason} />
+      }
+
+      return (
+        <CloseMonthScreen
+          ledger={ledger}
+          month={monthToClose}
+          spreadsheetId={spreadsheet.id}
+          closedBy={user.email}
+          onClosed={message => onWritten(message, { page: 'home' })}
+          onBack={backHome}
+          onReread={onReload}
+        />
+      )
+
+    case 'edit':
+      if (!canWrite || !editableMonths(ledger.months).includes(route.month)) {
+        const monthName = displayLongMonth(route.month)
+        const reason = canWrite ? `Only a closed month or one from the legacy history can be edited, and ${monthName} is neither.` : ''
+        return <Unavailable title={`Edit ${monthName}`} notice={readOnlyNotice} reason={reason} />
+      }
+
+      return (
+        <EditMonthScreen
+          key={route.month}
+          ledger={ledger}
+          month={route.month}
+          spreadsheetId={spreadsheet.id}
+          onEdited={message => onWritten(message, { page: 'months' })}
+          onBack={() => navigate({ page: 'months' })}
+          onReread={onReload}
+        />
+      )
+
+    case 'pots':
+      if (!canWrite)
+        return <Unavailable title="Pots and holdings" notice={readOnlyNotice} reason="" />
+
+      return (
+        <PotsScreen
+          ledger={ledger}
+          spreadsheetId={spreadsheet.id}
+          monthToClose={monthToClose}
+          onWritten={message => onWritten(message, route)}
+          onBack={backHome}
+          onReread={onReload}
+        />
+      )
+  }
+}
+
+interface UnavailableProps {
+  title: string
+  // Why the spreadsheet is read-only, when it is.
+  notice: ReactNode
+  // Why the page has nothing to offer otherwise.
+  reason: string
+}
+
+function Unavailable({ title, notice, reason }: UnavailableProps) {
+  return (
+    <>
+      <PageHeader title={title} />
+      {notice}
+      {reason && <p className="card card-padded muted">{reason}</p>}
     </>
   )
 }

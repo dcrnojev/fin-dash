@@ -1,98 +1,94 @@
 import type { Change, HeadlineFigure, HeadlineFigures } from '../calc/headlineFigures'
+import { monthFigure, type MonthFigure } from '../calc/monthFigure'
+import type { MonthTotal, SnapshotHistory } from '../calc/snapshotHistory'
+import { sparkline } from '../calc/sparkline'
 import { addMonths } from '../domain/month'
 import type { Month } from '../domain/types'
-import { displayEuros, displayMonth, displaySignedEuros, displaySignedPercent } from '../format'
+import { displayFigure, displayMonth, displayMonthName } from '../format'
+import { ChangeText } from './ChangeText'
+import { Sparkline } from './Sparkline'
+
+const sparklineMonths = 12
 
 interface HeadlineTilesProps {
   figures: HeadlineFigures
+  history: SnapshotHistory
   hideAmounts: boolean
 }
 
-export function HeadlineTiles({ figures, hideAmounts }: HeadlineTilesProps) {
+export function HeadlineTiles({ figures, history, hideAmounts }: HeadlineTilesProps) {
   const tiles = [
-    { label: 'Total cash', figure: figures.cash },
-    { label: 'Total investments', figure: figures.investments },
-    { label: 'Cash and investments', figure: figures.combined },
+    { label: 'Total cash', figure: figures.cash, months: history.cash.months },
+    { label: 'Total investments', figure: figures.investments, months: history.investments.months },
+    { label: 'Cash and investments', figure: figures.combined, months: history.combined },
   ]
 
   return (
-    <div className="headline">
-      <p className="muted">At the end of {displayMonth(figures.month)}</p>
-      <ul className="tiles">
-        {tiles.map(tile => (
-          <li key={tile.label} className="tile">
-            <span className="tile-label">{tile.label}</span>
-            <TileValue figure={tile.figure} hideAmounts={hideAmounts} />
-            <ChangeLine
-              measured={tile.figure.versusPreviousMonth}
-              estimated={tile.figure.estimatedVersusPreviousMonth}
-              since={addMonths(figures.month, -1)}
-              hideAmounts={hideAmounts}
-            />
-            <ChangeLine
-              measured={tile.figure.versusYearEarlier}
-              estimated={tile.figure.estimatedVersusYearEarlier}
-              since={addMonths(figures.month, -12)}
-              hideAmounts={hideAmounts}
-            />
-          </li>
-        ))}
-      </ul>
-    </div>
+    <ul className="tiles">
+      {tiles.map(tile => (
+        <Tile key={tile.label} {...tile} month={figures.month} hideAmounts={hideAmounts} />
+      ))}
+    </ul>
   )
 }
 
-function TileValue({ figure, hideAmounts }: { figure: HeadlineFigure; hideAmounts: boolean }) {
-  const estimatedNote = <span className="tile-note">Estimated: some pots have no snapshot this month.</span>
-
-  if (figure.total !== null)
-    return <span className="tile-value">{displayEuros(figure.total, hideAmounts)}</span>
-
-  if (figure.estimatedTotal !== null) {
-    return (
-      <span className="tile-value">
-        {displayEuros(figure.estimatedTotal, hideAmounts)}
-        {estimatedNote}
-      </span>
-    )
-  }
-
-  if (figure.knownPart !== null) {
-    return (
-      <span className="tile-value">
-        <span className="tile-qualifier">at least </span>
-        {displayEuros(figure.knownPart, hideAmounts)}
-        <span className="tile-note">A pot has no snapshot this month and cannot be estimated.</span>
-        {figure.knownPartIncludesEstimates && estimatedNote}
-      </span>
-    )
-  }
-
-  return <span className="tile-value muted">unknown</span>
-}
-
-interface ChangeLineProps {
-  // At most one of the two is set.
-  measured: Change | null
-  estimated: Change | null
-  since: Month
+interface TileProps {
+  label: string
+  figure: HeadlineFigure
+  months: readonly MonthTotal[]
+  month: Month
   hideAmounts: boolean
 }
 
-function ChangeLine({ measured, estimated, since, hideAmounts }: ChangeLineProps) {
+function Tile({ label, figure, months, month, hideAmounts }: TileProps) {
+  const value = monthFigure(figure)
+  const previousMonth = addMonths(month, -1)
+  const yearEarlier = addMonths(month, -12)
+
+  return (
+    <li className="card tile">
+      <span className="tile-label">
+        {label}
+        <StateChip figure={value} />
+      </span>
+      <span className={value === null ? 'tile-value muted' : 'tile-value'}>{value === null ? 'unknown' : displayFigure(value, hideAmounts)}</span>
+      <Sparkline line={sparkline(months, month, sparklineMonths)} />
+      <dl className="tile-changes">
+        <dt>vs {displayMonthName(previousMonth)}</dt>
+        <dd>
+          <TileChange measured={figure.versusPreviousMonth} estimated={figure.estimatedVersusPreviousMonth} hideAmounts={hideAmounts} />
+        </dd>
+        <dt>vs {displayMonth(yearEarlier)}</dt>
+        <dd>
+          <TileChange measured={figure.versusYearEarlier} estimated={figure.estimatedVersusYearEarlier} hideAmounts={hideAmounts} />
+        </dd>
+      </dl>
+    </li>
+  )
+}
+
+function StateChip({ figure }: { figure: MonthFigure | null }) {
+  if (figure?.state === 'estimated')
+    return <span className="chip chip-dashed" title="Some pots have no snapshot this month and are estimated.">Estimated</span>
+
+  if (figure?.state === 'at-least')
+    return <span className="chip chip-dashed" title="A pot has no snapshot this month and cannot be estimated.">At least</span>
+
+  return null
+}
+
+interface TileChangeProps {
+  // At most one of the two is set.
+  measured: Change | null
+  estimated: Change | null
+  hideAmounts: boolean
+}
+
+function TileChange({ measured, estimated, hideAmounts }: TileChangeProps) {
   const change = measured ?? estimated
 
   if (change === null)
-    return <span className="tile-change muted">vs {displayMonth(since)}: no complete figure</span>
+    return <span className="muted">no complete figure</span>
 
-  const direction = change.amount > 0 ? 'up' : change.amount < 0 ? 'down' : 'flat'
-  const percent = change.ratio === null ? '' : ` (${displaySignedPercent(change.ratio)})`
-
-  return (
-    <span className={`tile-change change-${direction}`}>
-      vs {displayMonth(since)}: {displaySignedEuros(change.amount, hideAmounts)}
-      {percent}
-      {estimated !== null && ' (estimated)'}
-    </span>
-  )
+  return <ChangeText amount={change.amount} ratio={change.ratio} estimated={estimated !== null} hideAmounts={hideAmounts} />
 }

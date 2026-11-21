@@ -1,4 +1,5 @@
 import type { Ledger, Month } from '../../domain/types'
+import { PageHeader } from '../PageHeader'
 import { AddHoldingForm } from './AddHoldingForm'
 import { AddPotForm } from './AddPotForm'
 import { PotList } from './PotList'
@@ -15,12 +16,15 @@ interface PotsScreenProps {
 export function PotsScreen({ ledger, spreadsheetId, monthToClose, onWritten, onBack, onReread }: PotsScreenProps) {
   return (
     <section className="screen">
-      <div className="screen-header">
-        <h2>Pots and holdings</h2>
-        <button type="button" className="link-button" onClick={onBack}>
-          Back to the dashboard
-        </button>
-      </div>
+      <PageHeader
+        title="Pots and holdings"
+        description="What the family owns and who owns it."
+        actions={
+          <button type="button" className="link-button" onClick={onBack}>
+            Back to home
+          </button>
+        }
+      />
 
       <p className="notice">
         Ids, opened months, a pot's kind and a holding's pot cannot be edited, because existing snapshot rows depend on them:

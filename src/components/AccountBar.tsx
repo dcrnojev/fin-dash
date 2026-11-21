@@ -8,11 +8,15 @@ interface AccountBarProps {
 
 export function AccountBar({ user, signOutDisabled, onSignOut }: AccountBarProps) {
   return (
-    <div className="account-bar">
-      <span className="account-name">
-        Signed in as <strong>{user.name}</strong> <span className="muted">({user.email})</span>
+    <div className="account">
+      <span className="avatar" aria-hidden="true">
+        {user.name.trim().charAt(0).toUpperCase()}
       </span>
-      <button type="button" onClick={onSignOut} disabled={signOutDisabled}>
+      <span className="account-name">
+        {user.name}
+        <small>{user.email}</small>
+      </span>
+      <button type="button" className="ghost-button small-button" onClick={onSignOut} disabled={signOutDisabled}>
         Sign out
       </button>
     </div>

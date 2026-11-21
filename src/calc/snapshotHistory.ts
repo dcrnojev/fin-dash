@@ -160,7 +160,7 @@ function withEstimates(measured: readonly (Cents | null | undefined)[]): (Qualif
   })
 }
 
-type MonthSums = Pick<MonthTotal, 'total' | 'estimatedTotal' | 'knownPart' | 'knownPartIncludesEstimates'>
+export type MonthSums = Pick<MonthTotal, 'total' | 'estimatedTotal' | 'knownPart' | 'knownPartIncludesEstimates'>
 
 // A total needs every part, and is measured only when every part is; with some unknown, the others only make a lower bound.
 function sumOfParts(parts: readonly (QualifiedCents | null)[]): MonthSums {

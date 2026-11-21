@@ -4,9 +4,23 @@ A family finance dashboard: a static React app that signs in with Google and rea
 Spreadsheet straight from the browser. There is no backend, and no financial data lives in this repo; it stays in Google.
 
 Today the app creates that spreadsheet from the legacy import, reads it back through the validator, and shows the month-end
-snapshot history (cash, investments, both together, and pension on its own) with a Data health panel listing what the
+snapshot history (cash, investments, both together, and pension on its own) with a Data health page listing what the
 validator found. It closes a month by appending that month's snapshot rows, edits the values of a month already closed,
 and adds and edits pots and holdings.
+
+## Screens and navigation
+
+- Once signed in, every page sits in one shell (`src/components/shell/`): a menu on the left, which becomes a drawer
+  opened from the top bar below 820px wide, and a top bar with the page name and the Hide amounts switch. Menu entries
+  for planned features show as "Soon" and open nothing.
+- The page lives in the URL hash (`#/`, `#/close`, `#/months`, `#/months/2026-10`, `#/pots`, `#/health`, `#/setup`),
+  read by `useRoute` in `src/routing/`, so GitHub Pages serves every page from `index.html` and the back button works.
+  An unknown hash opens Home. Until a spreadsheet is chosen, only Setup and spreadsheet opens.
+- Home: the headline tiles, one chart card (cash, investments, both, or pension; 12 months, 24 months or all; as a chart
+  or as a table) and the latest month by pot. Months lists every month with its status and totals and opens a closed or
+  legacy month's edit page. "Close <month>" in the menu shows "Due" once that month has ended.
+- Hide amounts masks every euro figure on screen but keeps percentages and colours; Data health then shows each issue's
+  code instead of its message, since a message can quote an amount.
 
 ## How it reaches Google
 
@@ -70,10 +84,12 @@ spreadsheet; this app then shows it read-only and asks for an update.
 - `src/calc/`: pure functions from a validated ledger to chart series and headline figures. A month without a snapshot row
   for a pot is never zero. Between two measured months of the same pot it is estimated on a straight line, gap months
   included; before a pot's first or after its last measured month it stays unknown, and a total that needs it shows only
-  the known part as a lower bound. Charts, tiles, tooltips and tables mark estimated values as estimated.
+  the known part as a lower bound. Charts, tiles, tooltips and tables mark estimated values with `≈` (dotted lines with
+  hollow diamonds, hatched columns) and lower bounds with `≥` (dashed or faded).
 - Estimates exist only on screen: nothing is written to the spreadsheet, gap months keep the status `gap`, and later
   calculations over a gap (spending, for one) must not read an estimated balance as a measured one.
 - `src/data/`: storage, behind the `DataStore` interface.
+- `src/routing/`: the hash routes and the hook that follows them.
 - `src/components/`: React only; charts use Recharts, whose types stay inside `src/components/charts/`.
 
 ## Pots and holdings
@@ -124,7 +140,7 @@ spreadsheet; this app then shows it read-only and asks for an update.
 
 ## Editing a month
 
-- "Edit a month" on the dashboard opens the same form for a `closed` or `legacy` month, filled with what the sheet has.
+- A `closed` or `legacy` month on the Months page opens the same form, filled with what the sheet has.
   Each pot keeps the level it is stored at. A field the month has no row for may stay blank; a row cannot be blanked.
 - The review lists only the changed and added values, as the sheet has them and as they will be.
 - Saving re-reads `snapshots` and finds each changed row by its key (`month`, `pot_id`, `holding_id`). A key that is

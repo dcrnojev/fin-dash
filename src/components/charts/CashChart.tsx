@@ -1,6 +1,7 @@
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { PotGroupHistory, PotGroupMonth } from '../../calc/snapshotHistory'
-import { ChartCard } from './ChartCard'
+import type { Month } from '../../domain/types'
+import { ChartBody, type ChartView } from './ChartBody'
 import { chartMargin, euroAxisProps, gridProps } from './chartChrome'
 import type { ChartSeries } from './chartSeries'
 import { IsolatedPointDot } from './IsolatedPointDot'
@@ -12,19 +13,22 @@ import { seriesColor } from './seriesColor'
 import { lineStateEntries } from './stateEntries'
 import { potValueText, totalText } from './valueText'
 
+const cashNote = 'Month-end balances. ≈ estimated on a straight line between two measured months; ≥ at least, where a pot cannot be estimated.'
+
 interface CashChartProps {
   history: PotGroupHistory
   hideAmounts: boolean
+  view: ChartView
+  editableMonths: ReadonlySet<Month>
 }
 
 // Total cash as the heavy line, each cash pot as its own thin line. Lines rather than a stack, because a cash pot can
 // go negative (an overdraft) and an unknown pot would otherwise leave a hole in the middle of a stack.
-export function CashChart({ history, hideAmounts }: CashChartProps) {
+export function CashChart({ history, hideAmounts, view, editableMonths }: CashChartProps) {
   const { pots, months } = history
   const knownParts = months.map(month => month.knownPart)
 
   const series: ChartSeries<PotGroupMonth>[] = [
-    { key: 'total', label: 'Total cash', color: 'var(--chart-total)', mark: 'line', text: month => totalText(month, hideAmounts) },
     ...pots.map((pot, position): ChartSeries<PotGroupMonth> => ({
       key: pot.id,
       label: pot.label,
@@ -32,15 +36,18 @@ export function CashChart({ history, hideAmounts }: CashChartProps) {
       mark: 'line',
       text: month => potValueText(month.potValues.get(pot.id), hideAmounts),
     })),
+    { key: 'total', label: 'Total cash', color: 'var(--chart-total)', mark: 'line', text: month => totalText(month, hideAmounts) },
   ]
 
   return (
-    <ChartCard
-      title="Cash"
-      note="Month-end balances. A month without a snapshot is estimated on a straight line between the measured months around it."
+    <ChartBody
       months={months}
       series={series}
       stateEntries={lineStateEntries(months)}
+      view={view}
+      note={cashNote}
+      editableMonths={editableMonths}
+      hideAmounts={hideAmounts}
     >
       <ResponsiveContainer width="100%" height={280}>
         <LineChart data={months} margin={chartMargin}>
@@ -85,6 +92,6 @@ export function CashChart({ history, hideAmounts }: CashChartProps) {
           />
         </LineChart>
       </ResponsiveContainer>
-    </ChartCard>
+    </ChartBody>
   )
 }

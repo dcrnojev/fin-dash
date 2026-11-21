@@ -1,6 +1,5 @@
 import type { Issue } from '../domain/types'
-
-const severityLabels: Record<Issue['severity'], string> = { error: 'Error', warning: 'Warning', info: 'Note' }
+import { SeverityChip } from './SeverityChip'
 
 interface IssueListProps {
   issues: readonly Issue[]
@@ -17,8 +16,8 @@ export function IssueList({ issues, tabLinks = {}, hideMessages = false }: Issue
         const tabLink = tabLinks[issue.tab]
 
         return (
-          <li key={index} className={`issue issue-${issue.severity}`}>
-            <span className="issue-severity">{severityLabels[issue.severity]}</span>
+          <li key={index} className="issue">
+            <SeverityChip severity={issue.severity} />
             <span className="issue-place">
               {tabLink ? (
                 <a href={tabLink} target="_blank" rel="noreferrer">

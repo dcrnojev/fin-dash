@@ -5,7 +5,8 @@ import { valueChanges, type ValueChange } from '../../close/editPlan'
 import { writeEdit, type WrittenEdit } from '../../close/writeEdit'
 import { localIsoDate } from '../../domain/date'
 import type { Ledger, Month } from '../../domain/types'
-import { countOf, displayMonth } from '../../format'
+import { countOf, displayLongMonth, displayMonth } from '../../format'
+import { PageHeader } from '../PageHeader'
 import { EditReviewTable } from './EditReviewTable'
 import { MonthValuesForm } from './MonthValuesForm'
 import { ReviewActions } from './ReviewActions'
@@ -48,12 +49,14 @@ export function EditMonthScreen({ ledger, month, spreadsheetId, onEdited, onBack
   }
 
   const header = (
-    <div className="screen-header">
-      <h2>Edit {monthName}</h2>
-      <button type="button" className="link-button" onClick={onBack} disabled={step.status === 'writing'}>
-        Back to the dashboard
-      </button>
-    </div>
+    <PageHeader
+      title={`Edit ${displayLongMonth(month)}`}
+      actions={
+        <button type="button" className="link-button" onClick={onBack} disabled={step.status === 'writing'}>
+          Back to months
+        </button>
+      }
+    />
   )
 
   if (closeFields(form).length === 0) {
@@ -70,7 +73,7 @@ export function EditMonthScreen({ ledger, month, spreadsheetId, onEdited, onBack
       <section className="screen">
         {header}
         <section className="panel">
-          <h3>Review before writing</h3>
+          <h2>Review before writing</h2>
           <p className="muted">
             Only these values are written. Each changed row gets the new value, <code>source</code> <code>app</code> and, for
             cash and investments, today as <code>as_of</code>; a value with no row gets a new one. No row is deleted, and the

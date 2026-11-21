@@ -1,6 +1,7 @@
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { PotGroupHistory, PotGroupMonth } from '../../calc/snapshotHistory'
-import { ChartCard } from './ChartCard'
+import type { Month } from '../../domain/types'
+import { ChartBody, type ChartView } from './ChartBody'
 import { chartMargin, euroAxisProps, gridProps } from './chartChrome'
 import type { ChartSeries } from './chartSeries'
 import { IsolatedPointDot } from './IsolatedPointDot'
@@ -14,20 +15,21 @@ import { potValueText, totalText } from './valueText'
 
 const statementNote =
   'Each value is as of its statement date, not the month end: a month holds the statement that arrived during it. ' +
-  'Pension is left out of the investment and combined totals.'
+  'Pension is left out of the investment and combined totals. ≈ estimated, ≥ at least.'
 
 interface PensionChartProps {
   history: PotGroupHistory
   hideAmounts: boolean
+  view: ChartView
+  editableMonths: ReadonlySet<Month>
 }
 
 // Total pension as the heavy line, each pension pot as its own thin line, drawn like the cash chart.
-export function PensionChart({ history, hideAmounts }: PensionChartProps) {
+export function PensionChart({ history, hideAmounts, view, editableMonths }: PensionChartProps) {
   const { pots, months } = history
   const knownParts = months.map(month => month.knownPart)
 
   const series: ChartSeries<PotGroupMonth>[] = [
-    { key: 'total', label: 'Total pension', color: 'var(--chart-total)', mark: 'line', text: month => totalText(month, hideAmounts) },
     ...pots.map((pot, position): ChartSeries<PotGroupMonth> => ({
       key: pot.id,
       label: pot.label,
@@ -35,15 +37,18 @@ export function PensionChart({ history, hideAmounts }: PensionChartProps) {
       mark: 'line',
       text: month => potValueText(month.potValues.get(pot.id), hideAmounts),
     })),
+    { key: 'total', label: 'Total pension', color: 'var(--chart-total)', mark: 'line', text: month => totalText(month, hideAmounts) },
   ]
 
   return (
-    <ChartCard
-      title="Pension"
-      note={statementNote}
+    <ChartBody
       months={months}
       series={series}
       stateEntries={lineStateEntries(months)}
+      view={view}
+      note={statementNote}
+      editableMonths={editableMonths}
+      hideAmounts={hideAmounts}
     >
       <ResponsiveContainer width="100%" height={280}>
         <LineChart data={months} margin={chartMargin}>
@@ -88,6 +93,6 @@ export function PensionChart({ history, hideAmounts }: PensionChartProps) {
           />
         </LineChart>
       </ResponsiveContainer>
-    </ChartCard>
+    </ChartBody>
   )
 }

@@ -1,7 +1,7 @@
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { PotGroupHistory, PotGroupMonth } from '../../calc/snapshotHistory'
-import type { PotId } from '../../domain/types'
-import { ChartCard } from './ChartCard'
+import type { Month, PotId } from '../../domain/types'
+import { ChartBody, type ChartView } from './ChartBody'
 import { chartMargin, euroAxisProps, gridProps } from './chartChrome'
 import type { ChartSeries } from './chartSeries'
 import { monthAt, monthAxisProps } from './monthAxis'
@@ -12,14 +12,20 @@ import { potValueText, totalText } from './valueText'
 
 const lowerBoundOpacity = 0.35
 
+const investmentsNote =
+  'Month-end values by pot, pension pots left out. ≈ estimated between two measured months (hatched); ≥ at least, where a pot ' +
+  'cannot be estimated (faded).'
+
 interface InvestmentsChartProps {
   history: PotGroupHistory
   hideAmounts: boolean
+  view: ChartView
+  editableMonths: ReadonlySet<Month>
 }
 
 // One stacked column per month. An estimated segment is hatched and outlined in its pot's colour. An unknown pot has
 // no segment at all, so a column with one is only the known part, and is faded.
-export function InvestmentsChart({ history, hideAmounts }: InvestmentsChartProps) {
+export function InvestmentsChart({ history, hideAmounts, view, editableMonths }: InvestmentsChartProps) {
   const { pots, months } = history
 
   const series: ChartSeries<PotGroupMonth>[] = [
@@ -43,12 +49,14 @@ export function InvestmentsChart({ history, hideAmounts }: InvestmentsChartProps
   }
 
   return (
-    <ChartCard
-      title="Investments"
-      note="Month-end values by pot, pension pots left out. Months without a snapshot are estimated from the months around them."
+    <ChartBody
       months={months}
       series={series}
       stateEntries={columnStateEntries(months)}
+      view={view}
+      note={investmentsNote}
+      editableMonths={editableMonths}
+      hideAmounts={hideAmounts}
     >
       <ResponsiveContainer width="100%" height={280}>
         <BarChart data={months} margin={chartMargin} barCategoryGap="20%" maxBarSize={24}>
@@ -85,7 +93,7 @@ export function InvestmentsChart({ history, hideAmounts }: InvestmentsChartProps
           ))}
         </BarChart>
       </ResponsiveContainer>
-    </ChartCard>
+    </ChartBody>
   )
 }
 

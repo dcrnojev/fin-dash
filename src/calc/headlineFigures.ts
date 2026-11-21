@@ -30,7 +30,7 @@ export interface HeadlineFigures {
   combined: HeadlineFigure
 }
 
-interface MeasuredOrEstimatedChange {
+export interface MeasuredOrEstimatedChange {
   measured: Change | null
   estimated: Change | null
 }
@@ -69,7 +69,7 @@ function headlineFigure(months: readonly MonthTotal[], month: Month): HeadlineFi
   }
 }
 
-function changeBetween(earlier: MonthTotal | undefined, later: MonthTotal | undefined, since: Month): MeasuredOrEstimatedChange {
+export function changeBetween(earlier: MonthTotal | undefined, later: MonthTotal | undefined, since: Month): MeasuredOrEstimatedChange {
   const noChange = { measured: null, estimated: null }
 
   if (earlier === undefined || later === undefined)

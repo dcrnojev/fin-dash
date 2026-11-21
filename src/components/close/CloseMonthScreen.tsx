@@ -9,7 +9,8 @@ import { snapshotHistory } from '../../calc/snapshotHistory'
 import { localIsoDate } from '../../domain/date'
 import { addMonths } from '../../domain/month'
 import type { IsoDate, Ledger, Month } from '../../domain/types'
-import { countOf, displayMonth } from '../../format'
+import { countOf, displayLongMonth, displayMonth } from '../../format'
+import { PageHeader } from '../PageHeader'
 import { CloseReviewTable } from './CloseReviewTable'
 import { MonthValuesForm } from './MonthValuesForm'
 import { ReviewActions } from './ReviewActions'
@@ -57,12 +58,14 @@ export function CloseMonthScreen({ ledger, month, spreadsheetId, closedBy, onClo
   }
 
   const header = (
-    <div className="screen-header">
-      <h2>Close {monthName}</h2>
-      <button type="button" className="link-button" onClick={onBack} disabled={step.status === 'writing'}>
-        Back to the dashboard
-      </button>
-    </div>
+    <PageHeader
+      title={`Close ${displayLongMonth(month)}`}
+      actions={
+        <button type="button" className="link-button" onClick={onBack} disabled={step.status === 'writing'}>
+          Back to home
+        </button>
+      }
+    />
   )
 
   if (closeFields(form).length === 0) {
@@ -81,7 +84,7 @@ export function CloseMonthScreen({ ledger, month, spreadsheetId, closedBy, onClo
       <section className="screen">
         {header}
         <section className="panel">
-          <h3>Review before writing</h3>
+          <h2>Review before writing</h2>
           <p className="muted">
             Nothing is written until you confirm. Cash and investment values are recorded as of the day you confirm (today,{' '}
             {reviewedOn}); each pension value as of its statement date. Pension stays out of the investment total.
