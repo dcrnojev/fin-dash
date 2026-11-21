@@ -1,4 +1,4 @@
-import type { MonthTotal } from '../../calc/snapshotHistory'
+import type { MonthTotal } from '../../calc/monthEndHistory'
 import type { LegendEntry, SeriesMark } from './chartSeries'
 
 const stateColor = 'var(--color-ink-2)'

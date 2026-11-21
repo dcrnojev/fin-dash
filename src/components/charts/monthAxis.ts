@@ -1,4 +1,4 @@
-import type { MonthTotal } from '../../calc/snapshotHistory'
+import type { MonthTotal } from '../../calc/monthEndHistory'
 import { monthFromIndex, monthIndex } from '../../domain/month'
 import { displayMonth } from '../../format'
 import { axisTick } from './chartChrome'

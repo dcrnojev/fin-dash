@@ -1,5 +1,5 @@
 import { Line } from 'recharts'
-import type { MonthTotal, QualifiedCents } from '../../calc/snapshotHistory'
+import type { MonthTotal, QualifiedCents } from '../../calc/monthEndHistory'
 import { EstimatedPointDot } from './EstimatedPointDot'
 import { IsolatedPointDot } from './IsolatedPointDot'
 import { splitByQuality } from './qualityLines'

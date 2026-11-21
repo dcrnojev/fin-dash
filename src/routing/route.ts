@@ -6,11 +6,11 @@ export type Route =
   | { page: 'close' }
   | { page: 'months' }
   | { page: 'edit'; month: Month }
-  | { page: 'pots' }
+  | { page: 'portfolio' }
   | { page: 'health' }
   | { page: 'setup' }
 
-const pagesWithoutParameters = ['close', 'months', 'pots', 'health', 'setup'] as const
+const pagesWithoutParameters = ['close', 'months', 'portfolio', 'health', 'setup'] as const
 
 // '#/months/2026-10' and the like. Anything the app does not know opens the home page.
 export function parseRoute(hash: string): Route {

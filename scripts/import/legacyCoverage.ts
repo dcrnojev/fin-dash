@@ -4,7 +4,7 @@ import type { LegacyWorkbook } from './legacySheet.ts'
 import type { OmfSheet } from './omfSheet.ts'
 import { cashFlowRef } from './sourceRef.ts'
 
-const notChosenReason = 'row not chosen as a month end (design F3: early-month snapshots are left out)'
+const notChosenReason = 'row not chosen as a month end (design F3: early-month readings are left out)'
 
 export const ignoredSheets = new Map([['Metrics', 'Metrics tab, not imported; the owner enters the loans by hand']])
 
@@ -39,9 +39,9 @@ export function markCashBalanceCoverage(
     else if (!chosen)
       coverage.mark(sheet.name, cell.address, notChosenReason)
     else if (role.kind === 'date')
-      coverage.mark(sheet.name, cell.address, 'imported: as_of of the month-end snapshots')
+      coverage.mark(sheet.name, cell.address, 'imported: as_of of the month-end balances')
     else if (importedSourceRefs.has(cashFlowRef(sheet.name, [cell.address])))
-      coverage.mark(sheet.name, cell.address, 'imported: snapshots')
+      coverage.mark(sheet.name, cell.address, 'imported: month-end balances')
   }
 }
 
@@ -50,10 +50,10 @@ export function markOmfCoverage(omf: OmfSheet, coverage: Coverage): void {
   const problemAddresses = new Set(omf.problems.map(problem => problem.address))
   const readRows = new Set(omf.rows.map(row => row.row))
   const reasonsByColumn = new Map([
-    [columns.date, 'imported: contribution date and snapshot as_of'],
+    [columns.date, 'imported: contribution date and month-end balance as_of'],
     [columns.payment, 'imported: contributions'],
     [columns.cumulative, 'running total, checked by R5'],
-    [columns.balance, 'imported: snapshots'],
+    [columns.balance, 'imported: month-end balances'],
     [columns.ratio, 'legacy return ratio, not imported'],
   ])
 

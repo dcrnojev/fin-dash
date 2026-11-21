@@ -2,7 +2,7 @@ import { daysBetween } from '../../src/domain/date.ts'
 import { addMonths, lastDayOfMonth, monthOfDate, monthsFromTo } from '../../src/domain/month.ts'
 import type { IsoDate, Month } from '../../src/domain/types.ts'
 
-// A snapshot can be the month end of M when it is dated from the 20th of M to the 5th of M+1.
+// A reading can be the month end of M when it is dated from the 20th of M to the 5th of M+1.
 const windowFirstDay = 20
 const windowLastDayOfNextMonth = 5
 
@@ -15,24 +15,24 @@ export interface Candidate<T> {
 
 export interface MonthEndChoice<T> {
   month: Month
-  // Null for a gap: no snapshot falls in the month's window.
+  // Null for a gap: no reading falls in the month's window.
   chosen: Candidate<T> | null
   candidates: Candidate<T>[]
 }
 
 export interface MonthEndSelection<T> {
   months: MonthEndChoice<T>[]
-  // Snapshots outside every month's window, such as the early-month readings of the two-a-month era.
+  // Readings outside every month's window, such as the early-month ones of the two-a-month era.
   outsideWindows: T[]
 }
 
-// Picks one snapshot per month: the candidate closest to the last day of the month, the earlier one on a tie.
+// Picks one reading per month: the candidate closest to the last day of the month, the earlier one on a tie.
 // Months run from the first to the last month that has a candidate; months in between without one are gaps.
-export function chooseMonthEnds<T>(snapshots: readonly { date: IsoDate; item: T }[]): MonthEndSelection<T> {
+export function chooseMonthEnds<T>(readings: readonly { date: IsoDate; item: T }[]): MonthEndSelection<T> {
   const candidatesByMonth = new Map<Month, Candidate<T>[]>()
   const outsideWindows: T[] = []
 
-  for (const { date, item } of snapshots) {
+  for (const { date, item } of readings) {
     const month = windowMonth(date)
 
     if (month === null) {

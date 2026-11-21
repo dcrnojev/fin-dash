@@ -11,8 +11,9 @@ const metaKeys = {
   schemaVersion: 'schema_version',
 } as const satisfies Record<keyof Meta, string>
 
-// The schema version this code reads and writes. A spreadsheet with a higher one was written by a newer app.
-export const appSchemaVersion = 1
+// The schema version this code reads and writes. A spreadsheet with a higher one was written by a newer app; one with a
+// lower one is updated in place first (src/schemaUpdate/).
+export const appSchemaVersion = 2
 
 // The app writes `_meta` last when it creates the spreadsheet, so a missing schema version means the setup did not finish.
 export function metaFromEntries(entries: readonly MetaEntry[], issues: Issue[]): Meta | null {

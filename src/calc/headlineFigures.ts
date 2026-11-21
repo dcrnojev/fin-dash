@@ -1,6 +1,6 @@
 import { addMonths } from '../domain/month.ts'
 import type { Cents, Month } from '../domain/types.ts'
-import type { MonthTotal, SnapshotHistory } from './snapshotHistory.ts'
+import type { MonthEndHistory, MonthTotal } from './monthEndHistory.ts'
 
 export interface Change {
   since: Month
@@ -36,7 +36,7 @@ export interface MeasuredOrEstimatedChange {
 }
 
 // The figures for the latest month with any known value, or null when the history has none.
-export function headlineFigures(history: SnapshotHistory): HeadlineFigures | null {
+export function headlineFigures(history: MonthEndHistory): HeadlineFigures | null {
   const latest = history.combined.findLast(month => month.total !== null || month.estimatedTotal !== null || month.knownPart !== null)
 
   if (latest === undefined)

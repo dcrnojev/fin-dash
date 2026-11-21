@@ -1,8 +1,8 @@
 import { addMonths } from '../domain/month.ts'
 import type { Ledger, Month, MonthRecord } from '../domain/types.ts'
 import { changeBetween, type Change } from './headlineFigures.ts'
+import type { MonthEndHistory, MonthTotal } from './monthEndHistory.ts'
 import { monthFigure, type MonthFigure } from './monthFigure.ts'
-import type { MonthTotal, SnapshotHistory } from './snapshotHistory.ts'
 
 export type MonthStatus = MonthRecord['status']
 
@@ -20,7 +20,7 @@ export interface MonthRow {
 }
 
 // Every month of the history, latest first, plus the month to close when the history does not reach it yet.
-export function monthRows(history: SnapshotHistory, records: Ledger['months'], monthToClose: Month | null): MonthRow[] {
+export function monthRows(history: MonthEndHistory, records: Ledger['months'], monthToClose: Month | null): MonthRow[] {
   const rows = history.combined.map((combined, position): MonthRow => {
     const change = changeBetween(history.combined[position - 1], combined, addMonths(combined.month, -1))
 

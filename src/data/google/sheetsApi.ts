@@ -5,18 +5,25 @@ import {
   type SpreadsheetRef,
   type SpreadsheetTabs,
   type TabLayout,
+  type TabRename,
   type TabRows,
 } from '../types'
 import { a1Cell } from './a1Cell'
 import type { GoogleSession } from './googleSession'
-import { tabFormatRequests } from './tabFormatRequests'
+import { tabFormatRequests, type SheetsRequest } from './tabFormatRequests'
 
 const sheetsBaseUrl = 'https://sheets.googleapis.com/v4/spreadsheets'
+const driveFilesUrl = 'https://www.googleapis.com/drive/v3/files'
 
 interface SpreadsheetResponse {
   spreadsheetId: string
   properties: { title: string }
   sheets?: { properties: { sheetId: number; title: string } }[]
+}
+
+interface DriveFileResponse {
+  id: string
+  name: string
 }
 
 interface BatchGetResponse {
@@ -41,7 +48,8 @@ class ApiError extends DataError {
   }
 }
 
-// Thin wrapper over the Sheets REST API with fetch, so the app needs no Google client library for data calls.
+// Thin wrapper over the Sheets REST API, plus Drive's file copy, with fetch, so the app needs no Google client library for data
+// calls.
 export class SheetsApi {
   private readonly session: GoogleSession
 
@@ -57,6 +65,16 @@ export class SheetsApi {
       method: 'POST',
       body: JSON.stringify({ majorDimension: 'ROWS', values: rows }),
     })
+  }
+
+  // A copy made by the app counts as a file it created, so the drive.file scope covers it.
+  async copySpreadsheet(spreadsheetId: string, title: string): Promise<SpreadsheetRef> {
+    const copied = await this.send<DriveFileResponse>(`${driveFilesUrl}/${encodeURIComponent(spreadsheetId)}/copy?fields=id,name`, {
+      method: 'POST',
+      body: JSON.stringify({ name: title }),
+    })
+
+    return { id: copied.id, name: copied.name }
   }
 
   async createSpreadsheet(title: string, tabNames: readonly string[]): Promise<SpreadsheetRef> {
@@ -121,6 +139,37 @@ export class SheetsApi {
     return { spreadsheet, values, tabLinks }
   }
 
+  async renameTabsAndUpdateCells(spreadsheetId: string, renames: readonly TabRename[], updates: readonly CellUpdate[]): Promise<void> {
+    const { sheetIdsByTitle } = await this.listSheets(spreadsheetId)
+
+    const sheetIdOf = (tab: string): number => {
+      const sheetId = sheetIdsByTitle.get(tab)
+
+      if (sheetId === undefined)
+        throw new DataError('failed', `The spreadsheet has no tab named ${tab}.`)
+
+      return sheetId
+    }
+
+    const renameRequests = renames.map((rename): SheetsRequest => ({
+      updateSheetProperties: { properties: { sheetId: sheetIdOf(rename.from), title: rename.to }, fields: 'title' },
+    }))
+
+    // A cell is addressed by its sheet id, which a rename in the same request does not change.
+    const cellRequests = updates.map((update): SheetsRequest => ({
+      updateCells: {
+        start: { sheetId: sheetIdOf(update.tab), rowIndex: update.row - 1, columnIndex: update.column },
+        rows: [{ values: [{ userEnteredValue: enteredValue(update.value) }] }],
+        fields: 'userEnteredValue',
+      },
+    }))
+
+    await this.send(`${this.spreadsheetUrl(spreadsheetId)}:batchUpdate`, {
+      method: 'POST',
+      body: JSON.stringify({ requests: [...renameRequests, ...cellRequests] }),
+    })
+  }
+
   async updateCells(spreadsheetId: string, updates: readonly CellUpdate[]): Promise<void> {
     const data = updates.map(update => ({
       range: `${quoteTabName(update.tab)}!${a1Cell(update.row, update.column)}`,
@@ -150,7 +199,7 @@ export class SheetsApi {
         headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
       })
     } catch (error) {
-      throw new DataError('failed', `Could not reach Google Sheets: ${error instanceof Error ? error.message : String(error)}`)
+      throw new DataError('failed', `Could not reach ${serviceName(url)}: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
 
@@ -185,7 +234,7 @@ export class SheetsApi {
     }
 
     if (!response.ok)
-      throw new ApiError(response.status, await readErrorMessage(response))
+      throw new ApiError(response.status, await readErrorMessage(response, serviceName(url)))
 
     return response.json() as Promise<T>
   }
@@ -199,21 +248,33 @@ function spreadsheetEditUrl(spreadsheetId: string): string {
   return `https://docs.google.com/spreadsheets/d/${encodeURIComponent(spreadsheetId)}/edit`
 }
 
+function serviceName(url: string): string {
+  return url.startsWith(driveFilesUrl) ? 'Google Drive' : 'Google Sheets'
+}
+
+// A string stays text, as with RAW input: Sheets does not parse it into a number or date.
+function enteredValue(value: CellValue): Record<string, CellValue> {
+  if (typeof value === 'number')
+    return { numberValue: value }
+
+  return typeof value === 'boolean' ? { boolValue: value } : { stringValue: value }
+}
+
 function quoteTabName(tabName: string): string {
   return `'${tabName.replaceAll("'", "''")}'`
 }
 
-async function readErrorMessage(response: Response): Promise<string> {
+async function readErrorMessage(response: Response, service: string): Promise<string> {
   try {
     const body = (await response.json()) as GoogleErrorBody
 
     const statusLabel = [response.status, body.error?.status].filter(Boolean).join(' ')
 
     if (body.error?.message)
-      return `Google Sheets said (${statusLabel}): ${body.error.message}`
+      return `${service} said (${statusLabel}): ${body.error.message}`
   } catch {
     // Not a JSON error body; fall through to the HTTP status.
   }
 
-  return `Google Sheets answered HTTP ${response.status} ${response.statusText}.`
+  return `${service} answered HTTP ${response.status} ${response.statusText}.`
 }

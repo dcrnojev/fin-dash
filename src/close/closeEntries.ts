@@ -44,7 +44,7 @@ export function withLastMonthAmount(entry: FieldEntry, field: CloseField): Field
 }
 
 // Closing needs every field. Editing takes a field it leaves as it was without checking it again, and lets a field with
-// no row in the sheet stay blank, since a legacy month may not know every pot.
+// no row in the sheet stay blank, since a legacy month may not know every group.
 export function readEntries(form: CloseForm, entries: Readonly<Record<string, FieldEntry>>): ReadEntries {
   const fields: EnteredField[] = []
   const errors = new Map<string, FieldErrors>()
@@ -62,7 +62,7 @@ export function readEntries(form: CloseForm, entries: Readonly<Record<string, Fi
       continue
 
     const value = parseMoneyInput(entry.amount)
-    const isPension = field.pot.kind === 'pension'
+    const isPension = field.group.kind === 'pension'
     const asOf = isPension ? parseIsoDate(entry.asOf) : null
     const fieldErrors: FieldErrors = { amount: amountError(field, entry.amount, value), asOf: null }
 
@@ -88,12 +88,12 @@ function showsUnchanged(entry: FieldEntry, written: EnteredValue): boolean {
 
 function amountError(field: CloseField, text: string, value: number | null): string | null {
   if (text.trim() === '')
-    return field.alreadyWritten === null ? 'Enter a value; type 0 for an empty pot.' : 'Enter a value; the app never deletes a row.'
+    return field.alreadyWritten === null ? 'Enter a value; type 0 for an empty group.' : 'Enter a value; the app never deletes a row.'
 
   if (value === null)
     return 'Type an amount like 1.234,56 or 1234.56.'
 
-  if (value < 0 && field.pot.kind !== 'cash')
+  if (value < 0 && field.group.kind !== 'cash')
     return 'Only a cash balance can be negative.'
 
   return null

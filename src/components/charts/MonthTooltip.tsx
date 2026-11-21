@@ -1,4 +1,4 @@
-import type { MonthTotal } from '../../calc/snapshotHistory'
+import type { MonthTotal } from '../../calc/monthEndHistory'
 import { displayMonth } from '../../format'
 import type { ChartSeries } from './chartSeries'
 import { SeriesKey } from './SeriesKey'
@@ -19,7 +19,7 @@ export function MonthTooltip<T extends MonthTotal>({ month, series }: MonthToolt
     <div className="chart-tooltip">
       <p className="chart-tooltip-title">
         {displayMonth(month.month)}
-        {month.isGap && <span className="muted"> · gap month, no snapshots</span>}
+        {month.isGap && <span className="muted"> · gap month, no monthEndBalances</span>}
       </p>
       <ul>
         {rows.map(({ entry, text }) => (

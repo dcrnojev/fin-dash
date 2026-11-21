@@ -5,7 +5,7 @@ import { bundleToTabs } from '../../src/domain/schema/bundleTabs.ts'
 import type { TabName } from '../../src/domain/types.ts'
 import { toCsv } from './csv.ts'
 import { importCashFlow } from './importCashFlow.ts'
-import { labelRows, reviewRows, snapshotChoiceRows } from './outputFiles.ts'
+import { labelRows, monthEndChoiceRows, reviewRows } from './outputFiles.ts'
 import { renderReport } from './report.ts'
 import { validateBundle } from './validateBundle.ts'
 import { readWorkbook } from './workbookReader.ts'
@@ -33,8 +33,8 @@ writeFileSync(join(options.out, 'bundle.json'), JSON.stringify(result.bundle, nu
 for (const [tab, values] of Object.entries(bundleToTabs(result.bundle)))
   writeFileSync(join(reviewDirectory, `${tab}.csv`), toCsv(reviewRows(tab as TabName, values)))
 
-writeFileSync(join(options.out, 'labels.csv'), toCsv(labelRows(result.labelGroups)))
-writeFileSync(join(options.out, 'snapshot-choice.csv'), toCsv(snapshotChoiceRows(result.selection)))
+writeFileSync(join(options.out, 'labels.csv'), toCsv(labelRows(result.labelSlots)))
+writeFileSync(join(options.out, 'month-end-choice.csv'), toCsv(monthEndChoiceRows(result.selection)))
 
 const report = renderReport({
   cashFlowPath: options.cashflow,

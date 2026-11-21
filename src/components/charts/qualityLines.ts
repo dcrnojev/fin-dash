@@ -1,4 +1,4 @@
-import type { MonthTotal, QualifiedCents } from '../../calc/snapshotHistory'
+import type { MonthTotal, QualifiedCents } from '../../calc/monthEndHistory'
 
 export interface QualityLines {
   // One entry per month: the value to draw, or null for no point.
@@ -26,7 +26,7 @@ export function splitByQuality(values: readonly (QualifiedCents | null | undefin
   }
 }
 
-// A month's total in the same shape as a pot value, so totals split the same way.
+// A month's total in the same shape as a group value, so totals split the same way.
 export function totalValue(month: MonthTotal): QualifiedCents | null {
   if (month.total !== null)
     return { cents: month.total, quality: 'measured' }

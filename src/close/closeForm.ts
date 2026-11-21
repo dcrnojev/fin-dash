@@ -1,6 +1,6 @@
 import { sumCents } from '../domain/money.ts'
 import { addMonths, isOpenInMonth } from '../domain/month.ts'
-import type { Cents, Holding, IsoDate, Ledger, Month, Pot, PotKind, Snapshot } from '../domain/types.ts'
+import type { Balance, Cents, Group, GroupKind, IsoDate, Ledger, Month, MonthEndBalance } from '../domain/types.ts'
 
 // close: enter a month for the first time. edit: change the values of a month that is already closed or legacy.
 export type FormMode = 'close' | 'edit'
@@ -11,12 +11,12 @@ export interface EnteredValue {
   asOf: IsoDate | null
 }
 
-// One value the form asks for: a pot's, or one of its holdings'.
+// One value the form asks for: a group's, or one of its balances'.
 export interface CloseField {
   // Unique within the form.
   key: string
-  pot: Pot
-  holding: Holding | null
+  group: Group
+  balance: Balance | null
   // Last month's row at the same level, offered as a hint.
   lastMonth: EnteredValue | null
   // The row the sheet already has for the month at this level, from a close that failed midway, typed by hand, or
@@ -24,38 +24,38 @@ export interface CloseField {
   alreadyWritten: EnteredValue | null
 }
 
-export interface ClosePot {
-  pot: Pot
-  // One pot-level field, or one per holding.
+export interface CloseGroup {
+  group: Group
+  // One group-level field, or one per balance.
   fields: CloseField[]
-  // Last month's pot total when it was entered at the other level (one pot row against holding rows): a hint only,
+  // Last month's group total when it was entered at the other level (one group row against balance rows): a hint only,
   // since no field matches it.
   lastMonthTotalAtOtherLevel: Cents | null
 }
 
-// The pots open in the month, in sort order.
+// The groups open in the month, in sort order.
 export interface CloseForm {
   month: Month
   mode: FormMode
-  cash: ClosePot[]
-  investments: ClosePot[]
-  pensions: ClosePot[]
+  cash: CloseGroup[]
+  investments: CloseGroup[]
+  pensions: CloseGroup[]
 }
 
-type FormInput = Pick<Ledger, 'pots' | 'holdings' | 'snapshots'>
+type FormInput = Pick<Ledger, 'groups' | 'balances' | 'monthEndBalances'>
 
 export function closeForm(ledger: FormInput, month: Month, mode: FormMode): CloseForm {
-  const potsOfKind = (kind: PotKind): ClosePot[] =>
-    ledger.pots
-      .filter(pot => pot.kind === kind && isOpenInMonth(pot, month))
+  const groupsOfKind = (kind: GroupKind): CloseGroup[] =>
+    ledger.groups
+      .filter(group => group.kind === kind && isOpenInMonth(group, month))
       .sort((a, b) => a.sort - b.sort)
-      .map(pot => closePot(ledger, pot, month))
+      .map(group => closeGroup(ledger, group, month))
 
-  return { month, mode, cash: potsOfKind('cash'), investments: potsOfKind('investment'), pensions: potsOfKind('pension') }
+  return { month, mode, cash: groupsOfKind('cash'), investments: groupsOfKind('investment'), pensions: groupsOfKind('pension') }
 }
 
 export function closeFields(form: CloseForm): CloseField[] {
-  return [...form.cash, ...form.investments, ...form.pensions].flatMap(closePot => closePot.fields)
+  return [...form.cash, ...form.investments, ...form.pensions].flatMap(closeGroup => closeGroup.fields)
 }
 
 export function isReadOnly(form: CloseForm, field: CloseField): boolean {
@@ -63,43 +63,43 @@ export function isReadOnly(form: CloseForm, field: CloseField): boolean {
 }
 
 export function fieldLabel(field: CloseField): string {
-  return field.holding === null ? field.pot.label : `${field.pot.label}: ${field.holding.label}`
+  return field.balance === null ? field.group.label : `${field.group.label}: ${field.balance.label}`
 }
 
-// Only investment pots are entered per holding, while they have holdings open. Rows the sheet already has for the month
+// Only investment groups are entered per balance, while they have balances open. Rows the sheet already has for the month
 // decide the level instead, so a value is never asked for at a level that writing would then have to drop.
-function closePot(ledger: FormInput, pot: Pot, month: Month): ClosePot {
-  const rowsIn = (rowMonth: Month) => ledger.snapshots.filter(snapshot => snapshot.month === rowMonth && snapshot.pot === pot.id)
+function closeGroup(ledger: FormInput, group: Group, month: Month): CloseGroup {
+  const rowsIn = (rowMonth: Month) => ledger.monthEndBalances.filter(row => row.month === rowMonth && row.group === group.id)
   const lastMonthRows = rowsIn(addMonths(month, -1))
   const rowsAlreadyWritten = rowsIn(month)
-  const potHoldings = ledger.holdings.filter(holding => holding.pot === pot.id)
+  const groupBalances = ledger.balances.filter(balance => balance.group === group.id)
 
-  const openHoldings = pot.kind === 'investment' ? potHoldings.filter(holding => isOpenInMonth(holding, month)) : []
-  const writtenHoldingIds = new Set(rowsAlreadyWritten.flatMap(snapshot => (snapshot.holding === null ? [] : [snapshot.holding])))
+  const openBalances = group.kind === 'investment' ? groupBalances.filter(balance => isOpenInMonth(balance, month)) : []
+  const writtenBalanceIds = new Set(rowsAlreadyWritten.flatMap(row => (row.balance === null ? [] : [row.balance])))
 
-  const perHolding = rowsAlreadyWritten.length > 0 ? writtenHoldingIds.size > 0 : openHoldings.length > 0
-  const fieldHoldings: (Holding | null)[] = perHolding
-    ? potHoldings.filter(holding => openHoldings.includes(holding) || writtenHoldingIds.has(holding.id))
+  const perBalance = rowsAlreadyWritten.length > 0 ? writtenBalanceIds.size > 0 : openBalances.length > 0
+  const fieldBalances: (Balance | null)[] = perBalance
+    ? groupBalances.filter(balance => openBalances.includes(balance) || writtenBalanceIds.has(balance.id))
     : [null]
 
-  const fields = fieldHoldings.map(
-    (holding): CloseField => ({
-      key: holding === null ? pot.id : `${pot.id}|${holding.id}`,
-      pot,
-      holding,
-      lastMonth: rowAtLevel(pot, lastMonthRows, holding),
-      alreadyWritten: rowAtLevel(pot, rowsAlreadyWritten, holding),
+  const fields = fieldBalances.map(
+    (balance): CloseField => ({
+      key: balance === null ? group.id : `${group.id}|${balance.id}`,
+      group,
+      balance,
+      lastMonth: rowAtLevel(group, lastMonthRows, balance),
+      alreadyWritten: rowAtLevel(group, rowsAlreadyWritten, balance),
     })
   )
 
-  const lastMonthWasPerHolding = lastMonthRows.some(snapshot => snapshot.holding !== null)
-  const levelChanged = lastMonthRows.length > 0 && lastMonthWasPerHolding !== perHolding
+  const lastMonthWasPerBalance = lastMonthRows.some(monthEndBalance => monthEndBalance.balance !== null)
+  const levelChanged = lastMonthRows.length > 0 && lastMonthWasPerBalance !== perBalance
 
-  return { pot, fields, lastMonthTotalAtOtherLevel: levelChanged ? sumCents(lastMonthRows.map(snapshot => snapshot.value)) : null }
+  return { group, fields, lastMonthTotalAtOtherLevel: levelChanged ? sumCents(lastMonthRows.map(row => row.value)) : null }
 }
 
-function rowAtLevel(pot: Pot, rows: readonly Snapshot[], holding: Holding | null): EnteredValue | null {
-  const row = rows.find(snapshot => snapshot.holding === (holding?.id ?? null))
+function rowAtLevel(group: Group, rows: readonly MonthEndBalance[], balance: Balance | null): EnteredValue | null {
+  const row = rows.find(monthEndBalance => monthEndBalance.balance === (balance?.id ?? null))
 
-  return row === undefined ? null : { value: row.value, asOf: pot.kind === 'pension' ? row.asOf : null }
+  return row === undefined ? null : { value: row.value, asOf: group.kind === 'pension' ? row.asOf : null }
 }

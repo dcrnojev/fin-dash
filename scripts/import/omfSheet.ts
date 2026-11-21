@@ -2,7 +2,7 @@ import { serialToIsoDate } from '../../src/domain/date.ts'
 import { toCents } from '../../src/domain/money.ts'
 import type { Cents, IsoDate } from '../../src/domain/types.ts'
 import type { CellProblem } from './cashBalanceSheet.ts'
-import type { LegacyPerson } from './legacyPots.ts'
+import type { LegacyPerson } from './legacyGroups.ts'
 import { cellAt, findHeaderRow, headerText, isEmptyCell, type LegacyCell, type LegacySheet } from './legacySheet.ts'
 
 export const omfSheetName = 'OMF'

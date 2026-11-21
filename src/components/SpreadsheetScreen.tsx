@@ -3,6 +3,7 @@ import { editableMonths } from '../close/editableMonths'
 import type { SignedInUser, SpreadsheetRef } from '../data'
 import { localIsoDate } from '../domain/date'
 import { appSchemaVersion } from '../domain/schema/meta'
+import type { Ledger } from '../domain/types'
 import { displayLongMonth } from '../format'
 import type { LoadedLedger } from '../ledger/loadLedger'
 import { useLedger } from '../ledger/useLedger'
@@ -14,9 +15,10 @@ import { DataHealthScreen } from './DataHealthScreen'
 import { HomeScreen } from './home/HomeScreen'
 import { MonthsScreen } from './months/MonthsScreen'
 import { PageHeader } from './PageHeader'
-import { PotsScreen } from './pots/PotsScreen'
+import { PortfolioScreen } from './portfolio/PortfolioScreen'
 import { AppShell } from './shell/AppShell'
 import { ledgerSummary, type LedgerSummary } from './shell/ledgerSummary'
+import { UpdateSpreadsheetScreen } from './UpdateSpreadsheetScreen'
 
 interface SpreadsheetScreenProps {
   spreadsheet: SpreadsheetRef
@@ -66,7 +68,7 @@ export function SpreadsheetScreen({
   const loaded = state.status === 'loaded' ? state.loaded : null
 
   const summary = useMemo(
-    () => (loaded === null ? null : ledgerSummary(loaded.ledger, loaded.schema.status === 'ok', today)),
+    () => (loaded === null || loaded.ledger === null ? null : ledgerSummary(loaded.ledger, loaded.schema.status === 'ok', today)),
     [loaded, today]
   )
 
@@ -114,9 +116,19 @@ export function SpreadsheetScreen({
             </section>
           )}
 
-          {loaded !== null && summary !== null && (
+          {loaded !== null && loaded.schema.status === 'older' && (
+            <UpdateSpreadsheetScreen
+              spreadsheet={loaded.spreadsheet}
+              version={loaded.schema.version}
+              plan={loaded.schema.plan}
+              onUpdated={message => showWritten(message, route)}
+            />
+          )}
+
+          {loaded !== null && loaded.ledger !== null && summary !== null && (
             <LoadedSpreadsheet
               loaded={loaded}
+              ledger={loaded.ledger}
               summary={summary}
               route={route}
               user={user}
@@ -133,6 +145,7 @@ export function SpreadsheetScreen({
 
 interface LoadedSpreadsheetProps {
   loaded: LoadedLedger
+  ledger: Ledger
   summary: LedgerSummary
   // Setup and spreadsheet shows without the ledger.
   route: Exclude<Route, { page: 'setup' }>
@@ -142,8 +155,8 @@ interface LoadedSpreadsheetProps {
   onReload: () => void
 }
 
-function LoadedSpreadsheet({ loaded, summary, route, user, hideAmounts, onWritten, onReload }: LoadedSpreadsheetProps) {
-  const { spreadsheet, ledger, schema, tabLinks } = loaded
+function LoadedSpreadsheet({ loaded, ledger, summary, route, user, hideAmounts, onWritten, onReload }: LoadedSpreadsheetProps) {
+  const { spreadsheet, schema, tabLinks } = loaded
   const { monthToClose, canWrite } = summary
 
   if (schema.status === 'not-set-up') {
@@ -212,7 +225,7 @@ function LoadedSpreadsheet({ loaded, summary, route, user, hideAmounts, onWritte
 
     case 'close':
       if (!canWrite || monthToClose === null) {
-        const reason = canWrite ? 'The spreadsheet has no snapshots yet, so there is no month to close.' : ''
+        const reason = canWrite ? 'The spreadsheet has no month-end balances yet, so there is no month to close.' : ''
         return <Unavailable title="Close a month" notice={readOnlyNotice} reason={reason} />
       }
 
@@ -247,12 +260,12 @@ function LoadedSpreadsheet({ loaded, summary, route, user, hideAmounts, onWritte
         />
       )
 
-    case 'pots':
+    case 'portfolio':
       if (!canWrite)
-        return <Unavailable title="Pots and holdings" notice={readOnlyNotice} reason="" />
+        return <Unavailable title="Portfolio" notice={readOnlyNotice} reason="" />
 
       return (
-        <PotsScreen
+        <PortfolioScreen
           ledger={ledger}
           spreadsheetId={spreadsheet.id}
           monthToClose={monthToClose}

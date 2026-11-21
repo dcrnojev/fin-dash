@@ -1,19 +1,19 @@
 import { dataStore, type CellValue } from '../data'
 import { decodeTab } from '../domain/schema/decodeTab'
+import { monthEndBalancesTab } from '../domain/schema/monthEndBalancesTab'
 import { monthsTab } from '../domain/schema/monthsTab'
 import { rowsByKey } from '../domain/schema/rowsByKey'
 import { rowsForHeader } from '../domain/schema/rowsForHeader'
-import { snapshotsTab } from '../domain/schema/snapshotsTab'
-import type { Month, MonthRecord, Snapshot } from '../domain/types'
+import type { Month, MonthEndBalance, MonthRecord } from '../domain/types'
 import { countOf, displayMonth } from '../format'
 import type { CloseRows } from './closeRows'
 import { messageOf } from './messageOf'
 import { monthRowsChanged, monthRowsChangedMessage } from './monthRowsChanged'
 
 export interface WrittenClose {
-  snapshotRowsWritten: number
+  monthEndBalanceRowsWritten: number
   // Rows the sheet already had for the month when the form opened, shown read-only and left as they were.
-  snapshotRowsKept: number
+  monthEndBalanceRowsKept: number
 }
 
 type TabValues = Record<string, CellValue[][]>
@@ -21,44 +21,46 @@ type TabValues = Record<string, CellValue[][]>
 const nothingWritten = 'Nothing was written.'
 const finishLater = 'Read the sheet again, then close again to finish; the rows already written are kept.'
 
-// Reads `months` and `snapshots` again right before each append, and stops when the month got a months row or its
-// snapshot rows changed since the form opened. The snapshot rows go first and the months row last, so a close that fails
+// Reads `months` and `month_end_balances` again right before each append, and stops when the month got a months row or its
+// month-end balance rows changed since the form opened. The month-end balance rows go first and the months row last, so a close that fails
 // midway leaves the month open, and closing again after reading the sheet finishes it. Every error says what was written.
-export async function writeClose(spreadsheetId: string, rows: CloseRows, openedWith: readonly Snapshot[]): Promise<WrittenClose> {
+export async function writeClose(spreadsheetId: string, rows: CloseRows, openedWith: readonly MonthEndBalance[]): Promise<WrittenClose> {
   const { month } = rows.monthRecord
-  const written = { snapshotRowsWritten: rows.snapshots.length, snapshotRowsKept: rows.keptCount }
-  const beforeSnapshots = await readTabs(spreadsheetId, failure => `Reading the sheet again failed: ${failure} ${nothingWritten}`)
-  const problem = closeProblem(beforeSnapshots, month, openedWith)
+  const written = { monthEndBalanceRowsWritten: rows.monthEndBalances.length, monthEndBalanceRowsKept: rows.keptCount }
+  const beforeMonthEndBalances = await readTabs(spreadsheetId, failure => `Reading the sheet again failed: ${failure} ${nothingWritten}`)
+  const problem = closeProblem(beforeMonthEndBalances, month, openedWith)
 
   if (problem !== null)
     throw new Error(`${problem} ${nothingWritten}`)
 
-  let snapshotCells: CellValue[][]
+  let monthEndBalanceCells: CellValue[][]
 
   try {
-    snapshotCells = rowsForHeader(snapshotsTab, beforeSnapshots[snapshotsTab.name]?.[0] ?? [], rows.snapshots)
+    monthEndBalanceCells = rowsForHeader(monthEndBalancesTab, beforeMonthEndBalances[monthEndBalancesTab.name]?.[0] ?? [], rows.monthEndBalances)
     // Only checks, before anything is written, that the months tab can take the row.
-    monthCells(beforeSnapshots, rows.monthRecord)
+    monthCells(beforeMonthEndBalances, rows.monthRecord)
   } catch (error) {
     throw new Error(`${messageOf(error)} ${nothingWritten}`)
   }
 
-  if (rows.snapshots.length === 0) {
-    await appendMonthRow(spreadsheetId, beforeSnapshots, rows.monthRecord, failure => `${failure} ${nothingWritten}`)
+  if (rows.monthEndBalances.length === 0) {
+    await appendMonthRow(spreadsheetId, beforeMonthEndBalances, rows.monthRecord, failure => `${failure} ${nothingWritten}`)
     return written
   }
 
+  const rowCount = countOf(rows.monthEndBalances.length, 'month-end balance row')
+
   try {
-    await dataStore.appendRows(spreadsheetId, snapshotsTab.name, snapshotCells)
+    await dataStore.appendRows(spreadsheetId, monthEndBalancesTab.name, monthEndBalanceCells)
   } catch (error) {
-    const failed = `Writing ${countOf(rows.snapshots.length, 'snapshot row')} failed: ${messageOf(error)}`
+    const failed = `Writing ${rowCount} failed: ${messageOf(error)}`
     throw new Error(`${failed} ${displayMonth(month)} is not closed.`)
   }
 
-  const wrote = `${countOf(rows.snapshots.length, 'snapshot row')} for ${displayMonth(month)} went into the sheet, but the month is not closed.`
+  const wrote = `${rowCount} for ${displayMonth(month)} went into the sheet, but the month is not closed.`
   const afterWrote = (failure: string) => `${wrote} ${failure} ${finishLater}`
   const beforeMonthRow = await readTabs(spreadsheetId, failure => afterWrote(`Reading the sheet again failed: ${failure}`))
-  const laterProblem = closeProblem(beforeMonthRow, month, [...openedWith, ...rows.snapshots])
+  const laterProblem = closeProblem(beforeMonthRow, month, [...openedWith, ...rows.monthEndBalances])
 
   if (laterProblem !== null)
     throw new Error(afterWrote(laterProblem))
@@ -69,7 +71,7 @@ export async function writeClose(spreadsheetId: string, rows: CloseRows, openedW
 
 async function readTabs(spreadsheetId: string, failureMessage: (failure: string) => string): Promise<TabValues> {
   try {
-    return (await dataStore.readTabs(spreadsheetId, [monthsTab.name, snapshotsTab.name])).values
+    return (await dataStore.readTabs(spreadsheetId, [monthsTab.name, monthEndBalancesTab.name])).values
   } catch (error) {
     throw new Error(failureMessage(messageOf(error)))
   }
@@ -94,7 +96,7 @@ function monthCells(values: TabValues, record: MonthRecord): CellValue[][] {
 
 // Why the month cannot be closed now, or null. Problems in these tabs already show in Data health; here only the
 // readable rows matter.
-function closeProblem(values: TabValues, month: Month, expectedSnapshots: readonly Snapshot[]): string | null {
+function closeProblem(values: TabValues, month: Month, expectedMonthEndBalances: readonly MonthEndBalance[]): string | null {
   const monthName = displayMonth(month)
   const existingRecord = decodeTab(monthsTab, values[monthsTab.name] ?? [], []).find(record => record.month === month)
 
@@ -108,7 +110,7 @@ function closeProblem(values: TabValues, month: Month, expectedSnapshots: readon
     return `${problem} The app cannot change that row: delete it in the months tab, then close again.`
   }
 
-  const changedRows = monthRowsChanged(month, expectedSnapshots, rowsByKey(snapshotsTab, values[snapshotsTab.name] ?? []))
+  const changedRows = monthRowsChanged(month, expectedMonthEndBalances, rowsByKey(monthEndBalancesTab, values[monthEndBalancesTab.name] ?? []))
 
   return changedRows.length === 0 ? null : `${monthRowsChangedMessage(month, changedRows)} Read the sheet again to see them.`
 }

@@ -1,5 +1,5 @@
 import { sumCents, toCents } from '../../../src/domain/money.ts'
-import type { Cents, Snapshot } from '../../../src/domain/types.ts'
+import type { Cents, MonthEndBalance } from '../../../src/domain/types.ts'
 import { cashBalanceSheetName, type CashBalanceSheet } from '../cashBalanceSheet.ts'
 import { formatEuros } from '../formatEuros.ts'
 import { parseLegacyFormula, type Factor } from '../legacyFormula.ts'
@@ -16,10 +16,10 @@ type Evaluation = { cents: Cents } | { error: string }
 export function checkLegacyTotals(
   cashBalance: CashBalanceSheet,
   chosenRows: ReadonlySet<number>,
-  snapshots: readonly Snapshot[]
+  monthEndBalances: readonly MonthEndBalance[]
 ): CheckResult {
   const { sheet, roles, headerRow } = cashBalance
-  const importedBySourceRef = importedTotalsBySourceRef(snapshots)
+  const importedBySourceRef = importedTotalsBySourceRef(monthEndBalances)
 
   const partsByAddress = new Map(cashBalance.rows.flatMap(row => row.amounts).map(amount => [amount.address, amount.parts]))
   const evaluated = new Map<string, Evaluation>()
@@ -31,7 +31,7 @@ export function checkLegacyTotals(
     if (cell === undefined || isEmptyCell(cell))
       return { cents: 0 as Cents }
 
-    if (role?.kind === 'pot') {
+    if (role?.kind === 'group') {
       const imported = importedBySourceRef.get(cashFlowRef(cashBalanceSheetName, [address]))
       const parts = partsByAddress.get(address)
 

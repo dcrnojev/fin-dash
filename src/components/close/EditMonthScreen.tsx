@@ -26,7 +26,7 @@ interface EditMonthScreenProps {
   onReread: () => void
 }
 
-// The close form for a month already closed or from the legacy history, starting from what the sheet has. Each pot keeps
+// The close form for a month already closed or from the legacy history, starting from what the sheet has. Each group keeps
 // the level it is stored at.
 export function EditMonthScreen({ ledger, month, spreadsheetId, onEdited, onBack, onReread }: EditMonthScreenProps) {
   const form = useMemo(() => closeForm(ledger, month, 'edit'), [ledger, month])
@@ -40,7 +40,7 @@ export function EditMonthScreen({ ledger, month, spreadsheetId, onEdited, onBack
     setStep({ status: 'writing', changes })
 
     try {
-      const openedWith = ledger.snapshots.filter(snapshot => snapshot.month === month)
+      const openedWith = ledger.monthEndBalances.filter(monthEndBalance => monthEndBalance.month === month)
       const written = await writeEdit(spreadsheetId, month, changes, openedWith, localIsoDate(new Date()))
       onEdited(editedMessage(monthName, written))
     } catch (error) {
@@ -63,7 +63,7 @@ export function EditMonthScreen({ ledger, month, spreadsheetId, onEdited, onBack
     return (
       <section className="screen">
         {header}
-        <p className="panel muted">No cash, investment or pension pot is open in {monthName}, so there is nothing to edit.</p>
+        <p className="panel muted">No cash, investment or pension group is open in {monthName}, so there is nothing to edit.</p>
       </section>
     )
   }

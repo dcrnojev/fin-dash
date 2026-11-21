@@ -1,6 +1,6 @@
 import type { Change, HeadlineFigure, HeadlineFigures } from '../calc/headlineFigures'
+import type { MonthEndHistory, MonthTotal } from '../calc/monthEndHistory'
 import { monthFigure, type MonthFigure } from '../calc/monthFigure'
-import type { MonthTotal, SnapshotHistory } from '../calc/snapshotHistory'
 import { sparkline } from '../calc/sparkline'
 import { addMonths } from '../domain/month'
 import type { Month } from '../domain/types'
@@ -12,7 +12,7 @@ const sparklineMonths = 12
 
 interface HeadlineTilesProps {
   figures: HeadlineFigures
-  history: SnapshotHistory
+  history: MonthEndHistory
   hideAmounts: boolean
 }
 
@@ -69,10 +69,10 @@ function Tile({ label, figure, months, month, hideAmounts }: TileProps) {
 
 function StateChip({ figure }: { figure: MonthFigure | null }) {
   if (figure?.state === 'estimated')
-    return <span className="chip chip-dashed" title="Some pots have no snapshot this month and are estimated.">Estimated</span>
+    return <span className="chip chip-dashed" title="Some groups have no month-end balance this month and are estimated.">Estimated</span>
 
   if (figure?.state === 'at-least')
-    return <span className="chip chip-dashed" title="A pot has no snapshot this month and cannot be estimated.">At least</span>
+    return <span className="chip chip-dashed" title="A group has no month-end balance this month and cannot be estimated.">At least</span>
 
   return null
 }

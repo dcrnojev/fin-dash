@@ -9,7 +9,7 @@ describe('parseRoute', () => {
       { page: 'close' },
       { page: 'months' },
       { page: 'edit', month: '2030-04' as Month },
-      { page: 'pots' },
+      { page: 'portfolio' },
       { page: 'health' },
       { page: 'setup' },
     ]
@@ -23,7 +23,7 @@ describe('parseRoute', () => {
     expect(parseRoute('#')).toEqual({ page: 'home' })
     expect(parseRoute('#/budget')).toEqual({ page: 'home' })
     expect(parseRoute('#/months/2030-13')).toEqual({ page: 'home' })
-    expect(parseRoute('#/pots/extra')).toEqual({ page: 'home' })
+    expect(parseRoute('#/portfolio/extra')).toEqual({ page: 'home' })
   })
 
   it('accepts a hash written without the leading slash or with a trailing one', () => {

@@ -129,9 +129,9 @@ function ImportSummary({ check, busy, onConfirm }: ImportSummaryProps) {
 
   const counts = [
     `${ledger.people.length} people`,
-    `${ledger.pots.length} pots`,
-    `${ledger.holdings.length} holdings`,
-    `${ledger.snapshots.length} snapshots`,
+    `${ledger.groups.length} groups`,
+    `${ledger.balances.length} balances`,
+    `${ledger.monthEndBalances.length} month-end balances`,
     `${ledger.contributions.length} contributions`,
     `${ledger.months.size} months`,
   ]

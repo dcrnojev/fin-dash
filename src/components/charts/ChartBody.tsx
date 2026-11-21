@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { changeBetween } from '../../calc/headlineFigures'
-import type { MonthTotal } from '../../calc/snapshotHistory'
+import type { MonthTotal } from '../../calc/monthEndHistory'
 import { addMonths } from '../../domain/month'
 import type { Month } from '../../domain/types'
 import { displayMonth } from '../../format'
@@ -38,7 +38,7 @@ export function ChartBody<T extends MonthTotal>({
   hideAmounts,
   children,
 }: ChartBodyProps<T>) {
-  // A series with nothing to say in any month shown, such as a pot closed before the range, is left out.
+  // A series with nothing to say in any month shown, such as a group closed before the range, is left out.
   const shownSeries = series.filter(entry => months.some(month => entry.text(month) !== ''))
   const markedSeries = shownSeries.filter(entry => entry.mark !== 'none')
 

@@ -3,7 +3,7 @@ import { readEntries, type EnteredField, type FieldEntry, type FieldErrors } fro
 import type { CloseForm } from '../../close/closeForm'
 import { addMonths } from '../../domain/month'
 import { countOf, displayMonth } from '../../format'
-import { ClosePotFields } from './ClosePotFields'
+import { CloseGroupFields } from './CloseGroupFields'
 
 interface MonthValuesFormProps {
   form: CloseForm
@@ -34,10 +34,10 @@ export function MonthValuesForm({ form, entries, header, intro, problem, onEntry
   }
 
   const sections = [
-    { title: 'Cash', pots: form.cash },
-    { title: 'Investments', pots: form.investments },
-    { title: 'Pension', pots: form.pensions },
-  ].filter(section => section.pots.length > 0)
+    { title: 'Cash', groups: form.cash },
+    { title: 'Investments', groups: form.investments },
+    { title: 'Pension', groups: form.pensions },
+  ].filter(section => section.groups.length > 0)
 
   return (
     <form className="screen" onSubmit={review} noValidate>
@@ -48,11 +48,11 @@ export function MonthValuesForm({ form, entries, header, intro, problem, onEntry
         <section key={section.title} className="panel">
           <h2>{section.title}</h2>
           <div className="close-grid">
-            {section.pots.map(closePot => (
-              <ClosePotFields
-                key={closePot.pot.id}
+            {section.groups.map(closeGroup => (
+              <CloseGroupFields
+                key={closeGroup.group.id}
                 form={form}
-                closePot={closePot}
+                closeGroup={closeGroup}
                 entries={entries}
                 errors={errors}
                 lastMonthName={lastMonthName}

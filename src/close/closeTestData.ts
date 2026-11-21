@@ -1,11 +1,11 @@
-import type { Cents, Holding, HoldingId, IsoDate, Month, MonthRecord, Pot, PotId, PotKind, Snapshot } from '../domain/types.ts'
+import type { Balance, BalanceId, Cents, Group, GroupId, GroupKind, IsoDate, Month, MonthEndBalance, MonthRecord } from '../domain/types.ts'
 
 // Invented ledger rows for the close tests.
 
-export function pot(id: string, kind: PotKind, sort: number, span: { opened?: string; closed?: string } = {}): Pot {
+export function group(id: string, kind: GroupKind, sort: number, span: { opened?: string; closed?: string } = {}): Group {
   return {
-    id: id as PotId,
-    label: `Pot ${id}`,
+    id: id as GroupId,
+    label: `Group ${id}`,
     kind,
     owner: 'household',
     provider: null,
@@ -19,11 +19,11 @@ export function pot(id: string, kind: PotKind, sort: number, span: { opened?: st
   }
 }
 
-export function holding(id: string, potId: string, span: { opened?: string; closed?: string } = {}): Holding {
+export function balance(id: string, groupId: string, span: { opened?: string; closed?: string } = {}): Balance {
   return {
-    id: id as HoldingId,
-    pot: potId as PotId,
-    label: `Holding ${id}`,
+    id: id as BalanceId,
+    group: groupId as GroupId,
+    label: `Balance ${id}`,
     owner: 'household',
     code: null,
     opened: (span.opened ?? null) as Month | null,
@@ -32,17 +32,17 @@ export function holding(id: string, potId: string, span: { opened?: string; clos
   }
 }
 
-export function snapshot(
+export function monthEndBalance(
   month: string,
-  potId: string,
+  groupId: string,
   cents: number,
-  holdingId: string | null = null,
+  balanceId: string | null = null,
   asOf: string | null = null
-): Snapshot {
+): MonthEndBalance {
   return {
     month: month as Month,
-    pot: potId as PotId,
-    holding: holdingId as HoldingId | null,
+    group: groupId as GroupId,
+    balance: balanceId as BalanceId | null,
     value: cents as Cents,
     asOf: asOf as IsoDate | null,
     source: 'import',

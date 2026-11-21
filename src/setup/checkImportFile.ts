@@ -13,7 +13,7 @@ export interface ImportCheck {
 
 export type ImportCheckResult = { check: ImportCheck; problem: null } | { check: null; problem: string }
 
-const bundleListKeys = ['people', 'pots', 'holdings', 'snapshots', 'contributions', 'months'] as const
+const bundleListKeys = ['people', 'groups', 'balances', 'monthEndBalances', 'contributions', 'months'] as const
 
 // Turns the import's bundle.json into tab rows and reads them back with the same validator that reads the spreadsheet,
 // so what the user confirms is what the app will later read.
@@ -44,7 +44,7 @@ export function checkImportFile(fileText: string): ImportCheckResult {
     return { check: null, problem: unwritableCell }
 
   // 'YYYY-MM' text sorts in time order.
-  const months = [...ledger.months.keys(), ...ledger.snapshots.map(snapshot => snapshot.month)].sort()
+  const months = [...ledger.months.keys(), ...ledger.monthEndBalances.map(monthEndBalance => monthEndBalance.month)].sort()
 
   return { check: { tabs, ledger, firstMonth: months.at(0) ?? null, lastMonth: months.at(-1) ?? null }, problem: null }
 }

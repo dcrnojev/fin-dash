@@ -13,14 +13,14 @@ export type Rate = number
 
 type Id<K extends string> = Brand<string, `id:${K}`>
 export type PersonId = Id<'person'>
-export type PotId = Id<'pot'>
-export type HoldingId = Id<'holding'>
+export type GroupId = Id<'group'>
+export type BalanceId = Id<'balance'>
 export type OwnerId = PersonId | 'household'
 
 export const sources = ['import', 'app', 'hand'] as const
 export type Source = (typeof sources)[number]
 
-export const tabNames = ['_meta', 'people', 'pots', 'holdings', 'snapshots', 'contributions', 'months'] as const
+export const tabNames = ['_meta', 'people', 'groups', 'balances', 'month_end_balances', 'contributions', 'months'] as const
 export type TabName = (typeof tabNames)[number]
 
 // The sheet row at read time; only for issue links, never for writes.
@@ -56,8 +56,8 @@ export interface Person {
   note: string | null
 }
 
-export const potKinds = ['cash', 'investment', 'pension', 'loan'] as const
-export type PotKind = (typeof potKinds)[number]
+export const groupKinds = ['cash', 'investment', 'pension', 'loan'] as const
+export type GroupKind = (typeof groupKinds)[number]
 export const liquidities = ['liquid', 'locked'] as const
 export const cadences = ['monthly', 'quarterly', 'none'] as const
 
@@ -67,10 +67,10 @@ export interface ReturnBand {
   high: Rate
 }
 
-export interface Pot {
-  id: PotId
+export interface Group {
+  id: GroupId
   label: string
-  kind: PotKind
+  kind: GroupKind
   owner: OwnerId
   provider: string | null
   liquidity: (typeof liquidities)[number]
@@ -82,9 +82,9 @@ export interface Pot {
   note: string | null
 }
 
-export interface Holding {
-  id: HoldingId
-  pot: PotId
+export interface Balance {
+  id: BalanceId
+  group: GroupId
   label: string
   owner: OwnerId
   code: string | null
@@ -93,10 +93,10 @@ export interface Holding {
   note: string | null
 }
 
-export interface Snapshot {
+export interface MonthEndBalance {
   month: Month
-  pot: PotId
-  holding: HoldingId | null
+  group: GroupId
+  balance: BalanceId | null
   value: Cents
   asOf: IsoDate | null
   source: Source
@@ -110,8 +110,8 @@ export const fundings = ['cash', 'external'] as const
 
 export interface Contribution {
   month: Month
-  pot: PotId
-  holding: HoldingId | null
+  group: GroupId
+  balance: BalanceId | null
   amount: Cents
   kind: (typeof contributionKinds)[number]
   funding: (typeof fundings)[number]
@@ -140,13 +140,13 @@ export interface MonthRecord {
   note: string | null
 }
 
-// The reference and snapshot tabs as domain objects: what the import produces and what the app writes into a new spreadsheet.
+// The reference and month-end balance tabs as domain objects: what the import produces and what the app writes into a new spreadsheet.
 export interface Bundle {
   meta: Meta
   people: Person[]
-  pots: Pot[]
-  holdings: Holding[]
-  snapshots: Snapshot[]
+  groups: Group[]
+  balances: Balance[]
+  monthEndBalances: MonthEndBalance[]
   contributions: Contribution[]
   months: MonthRecord[]
 }
@@ -154,9 +154,9 @@ export interface Bundle {
 export interface Ledger {
   meta: Meta | null
   people: Person[]
-  pots: Pot[]
-  holdings: Holding[]
-  snapshots: Snapshot[]
+  groups: Group[]
+  balances: Balance[]
+  monthEndBalances: MonthEndBalance[]
   contributions: Contribution[]
   months: Map<Month, MonthRecord>
   issues: Issue[]

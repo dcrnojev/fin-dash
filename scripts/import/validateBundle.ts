@@ -24,13 +24,13 @@ export function validateBundle(bundle: Bundle): BundleValidation {
 
   compare('_meta', [bundle.meta], ledger.meta === null ? [] : [ledger.meta])
   compare('people', bundle.people, ledger.people)
-  compare('pots', bundle.pots, ledger.pots)
-  compare('holdings', bundle.holdings, ledger.holdings)
-  compare('snapshots', bundle.snapshots, ledger.snapshots)
+  compare('groups', bundle.groups, ledger.groups)
+  compare('balances', bundle.balances, ledger.balances)
+  compare('month_end_balances', bundle.monthEndBalances, ledger.monthEndBalances)
   compare('contributions', bundle.contributions, ledger.contributions)
   compare('months', bundle.months, [...ledger.months.values()])
 
-  const tabs = [[bundle.meta], bundle.people, bundle.pots, bundle.holdings, bundle.snapshots, bundle.contributions, bundle.months]
+  const tabs = [[bundle.meta], bundle.people, bundle.groups, bundle.balances, bundle.monthEndBalances, bundle.contributions, bundle.months]
 
   return { issues: ledger.issues, changedRows, rowCount: tabs.reduce((total, rows) => total + rows.length, 0) }
 }

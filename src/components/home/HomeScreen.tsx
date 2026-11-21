@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { headlineFigures } from '../../calc/headlineFigures'
-import { snapshotHistory } from '../../calc/snapshotHistory'
+import { monthEndHistory } from '../../calc/monthEndHistory'
 import { editableMonths } from '../../close/editableMonths'
 import type { Ledger, Month } from '../../domain/types'
 import { displayLongMonth, displayMonthName } from '../../format'
@@ -8,7 +8,7 @@ import { issueCounts } from '../../ledger/issueCounts'
 import { routeHash } from '../../routing/route'
 import { HeadlineTiles } from '../HeadlineTiles'
 import { PageHeader } from '../PageHeader'
-import { ByPotPanel } from './ByPotPanel'
+import { ByGroupPanel } from './ByGroupPanel'
 import { HealthStrip } from './HealthStrip'
 import { HistoryChartCard } from './HistoryChartCard'
 
@@ -21,13 +21,13 @@ interface HomeScreenProps {
 }
 
 export function HomeScreen({ ledger, monthToClose, canWrite, hideAmounts }: HomeScreenProps) {
-  const history = useMemo(() => snapshotHistory(ledger), [ledger])
+  const history = useMemo(() => monthEndHistory(ledger), [ledger])
   const figures = useMemo(() => headlineFigures(history), [history])
   // Edit pages exist only where the app can write.
   const editable = useMemo(() => new Set(canWrite ? editableMonths(ledger.months) : []), [ledger, canWrite])
 
   const openMonth = monthToClose === null ? '' : ` ${displayMonthName(monthToClose)} is open.`
-  const description = figures === null ? 'The spreadsheet has no snapshots yet.' : `Figures to the end of ${displayLongMonth(figures.month)}.${openMonth}`
+  const description = figures === null ? 'The spreadsheet has no month-end balances yet.' : `Figures to the end of ${displayLongMonth(figures.month)}.${openMonth}`
 
   return (
     <>
@@ -51,7 +51,7 @@ export function HomeScreen({ ledger, monthToClose, canWrite, hideAmounts }: Home
           <HeadlineTiles figures={figures} history={history} hideAmounts={hideAmounts} />
           <div className="home-columns">
             <HistoryChartCard history={history} editableMonths={editable} hideAmounts={hideAmounts} />
-            <ByPotPanel history={history} month={figures.month} people={ledger.people} hideAmounts={hideAmounts} />
+            <ByGroupPanel history={history} month={figures.month} people={ledger.people} hideAmounts={hideAmounts} />
           </div>
         </>
       )}

@@ -1,5 +1,5 @@
 import { Area, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import type { MonthTotal } from '../../calc/snapshotHistory'
+import type { MonthTotal } from '../../calc/monthEndHistory'
 import type { Month } from '../../domain/types'
 import { ChartBody, type ChartView } from './ChartBody'
 import { chartMargin, euroAxisProps, gridProps } from './chartChrome'
@@ -13,7 +13,7 @@ import { lineStateEntries } from './stateEntries'
 import { totalText } from './valueText'
 
 const combinedNote =
-  'Shaded where every pot is measured. A month with any estimated pot is an estimated total (≈); with a pot that cannot be ' +
+  'Shaded where every group is measured. A month with any estimated group is an estimated total (≈); with a group that cannot be ' +
   'estimated, only the known part shows, as at least (≥). Pension is left out.'
 
 interface CombinedChartProps {
@@ -77,7 +77,7 @@ export function CombinedChart({ months, hideAmounts, view, editableMonths }: Com
           />
           <Line
             dataKey="knownPart"
-            name="Known pots only"
+            name="Known groups only"
             stroke="var(--chart-total)"
             strokeWidth={2}
             strokeDasharray="4 4"

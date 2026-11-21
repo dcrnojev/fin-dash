@@ -2,7 +2,7 @@ import type { Cents } from '../domain/types'
 import { displaySignedEuros, displaySignedPercent } from '../format'
 
 interface ChangeTextProps {
-  // Null when only the ratio is known, as for a pot's change.
+  // Null when only the ratio is known, as for a group's change.
   amount: Cents | null
   // Null when the earlier figure is zero.
   ratio: number | null

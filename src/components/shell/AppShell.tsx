@@ -17,7 +17,7 @@ interface AppShellProps {
   children: ReactNode
 }
 
-const recordPages: ReadonlySet<Route['page']> = new Set(['close', 'months', 'edit', 'pots'])
+const recordPages: ReadonlySet<Route['page']> = new Set(['close', 'months', 'edit', 'portfolio'])
 
 // The frame of every page once signed in: the menu, and a top bar with the page's name and the Hide amounts switch.
 export function AppShell({ route, hasSpreadsheet, summary, account, hideAmounts, onHideAmountsChange, children }: AppShellProps) {
@@ -112,8 +112,8 @@ function pageTitle(route: Route, monthToClose: Month | null): string {
       return 'Months'
     case 'edit':
       return `Edit ${displayLongMonth(route.month)}`
-    case 'pots':
-      return 'Pots and holdings'
+    case 'portfolio':
+      return 'Portfolio'
     case 'health':
       return 'Data health'
     case 'setup':

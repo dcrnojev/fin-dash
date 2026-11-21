@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { addMonths } from '../domain/month.ts'
-import type { Cents, Month, MonthRecord, Pot, PotId, Snapshot } from '../domain/types.ts'
+import type { Cents, Group, GroupId, Month, MonthEndBalance, MonthRecord } from '../domain/types.ts'
 import { headlineFigures } from './headlineFigures.ts'
-import { snapshotHistory } from './snapshotHistory.ts'
+import { monthEndHistory } from './monthEndHistory.ts'
 
-const cash: Pot = {
-  id: 'cash-a' as PotId,
+const cash: Group = {
+  id: 'cash-a' as GroupId,
   label: 'Cash A',
   kind: 'cash',
   owner: 'household',
@@ -19,21 +19,21 @@ const cash: Pot = {
   note: null,
 }
 
-const fund: Pot = { ...cash, id: 'fund' as PotId, label: 'Fund', kind: 'investment', sort: 40 }
+const fund: Group = { ...cash, id: 'fund' as GroupId, label: 'Fund', kind: 'investment', sort: 40 }
 
-function snapshot(month: Month, potId: PotId, cents: number): Snapshot {
-  return { month, pot: potId, holding: null, value: cents as Cents, asOf: null, source: 'import', sourceRef: null, note: null, ref: null }
+function monthEndBalance(month: Month, groupId: GroupId, cents: number): MonthEndBalance {
+  return { month, group: groupId, balance: null, value: cents as Cents, asOf: null, source: 'import', sourceRef: null, note: null, ref: null }
 }
 
 const first = '2030-01' as Month
 
 // Thirteen months of cash, growing by 10 euros a month from 100 euros.
-const cashYear = Array.from({ length: 13 }, (_, index) => snapshot(addMonths(first, index), cash.id, 100_00 + index * 10_00))
+const cashYear = Array.from({ length: 13 }, (_, index) => monthEndBalance(addMonths(first, index), cash.id, 100_00 + index * 10_00))
 const latest = addMonths(first, 12)
 
 describe('headlineFigures', () => {
   it('compares the latest month with the previous month and with twelve months earlier', () => {
-    const figures = headlineFigures(snapshotHistory({ pots: [cash], holdings: [], snapshots: cashYear, months: new Map() }))
+    const figures = headlineFigures(monthEndHistory({ groups: [cash], balances: [], monthEndBalances: cashYear, months: new Map() }))
 
     expect(figures?.month).toBe(latest)
     expect(figures?.cash.total).toBe(220_00)
@@ -46,7 +46,7 @@ describe('headlineFigures', () => {
     const gap: MonthRecord = { month: addMonths(latest, -1), status: 'gap', closedOn: null, closedBy: null, frozenPlan: null, note: null }
 
     const figures = headlineFigures(
-      snapshotHistory({ pots: [cash], holdings: [], snapshots: withoutPrevious.slice(1), months: new Map([[gap.month, gap]]) })
+      monthEndHistory({ groups: [cash], balances: [], monthEndBalances: withoutPrevious.slice(1), months: new Map([[gap.month, gap]]) })
     )
 
     expect(figures?.cash.total).toBe(220_00)
@@ -57,8 +57,8 @@ describe('headlineFigures', () => {
   })
 
   it('shows the known part of a partial total and no change against it', () => {
-    const snapshots = [...cashYear, snapshot(addMonths(latest, -1), fund.id, 50_00)]
-    const figures = headlineFigures(snapshotHistory({ pots: [cash, fund], holdings: [], snapshots, months: new Map() }))
+    const monthEndBalances = [...cashYear, monthEndBalance(addMonths(latest, -1), fund.id, 50_00)]
+    const figures = headlineFigures(monthEndHistory({ groups: [cash, fund], balances: [], monthEndBalances, months: new Map() }))
 
     expect(figures?.investments).toEqual({
       total: null,

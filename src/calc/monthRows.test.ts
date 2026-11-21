@@ -1,21 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import { monthRecords, pot, snapshot } from '../close/closeTestData.ts'
+import { group, monthEndBalance, monthRecords } from '../close/closeTestData.ts'
 import type { Month } from '../domain/types.ts'
+import { monthEndHistory } from './monthEndHistory.ts'
 import { monthRows } from './monthRows.ts'
-import { snapshotHistory } from './snapshotHistory.ts'
 
-const pots = [pot('current', 'cash', 10), pot('broker', 'investment', 20), pot('pension-a', 'pension', 30)]
+const groups = [group('current', 'cash', 10), group('broker', 'investment', 20), group('pension-a', 'pension', 30)]
 
-const snapshots = [
-  snapshot('2030-01', 'current', 100_00),
-  snapshot('2030-01', 'broker', 900_00),
-  snapshot('2030-01', 'pension-a', 5_000_00),
-  snapshot('2030-03', 'current', 300_00),
-  snapshot('2030-03', 'broker', 1_100_00),
+const monthEndBalances = [
+  monthEndBalance('2030-01', 'current', 100_00),
+  monthEndBalance('2030-01', 'broker', 900_00),
+  monthEndBalance('2030-01', 'pension-a', 5_000_00),
+  monthEndBalance('2030-03', 'current', 300_00),
+  monthEndBalance('2030-03', 'broker', 1_100_00),
 ]
 
 const records = monthRecords(['2030-01', 'legacy'], ['2030-02', 'gap'], ['2030-03', 'closed'])
-const history = snapshotHistory({ pots, holdings: [], snapshots, months: records })
+const history = monthEndHistory({ groups, balances: [], monthEndBalances, months: records })
 
 describe('monthRows', () => {
   it('lists every month latest first with its status and totals, pension apart from cash and investments', () => {

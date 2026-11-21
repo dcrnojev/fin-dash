@@ -16,9 +16,9 @@ interface CloseValueFieldProps {
 
 export function CloseValueField({ field, entry, errors, readOnly, lastMonthName, showBlankErrors, onChange }: CloseValueFieldProps) {
   const id = useId()
-  // A pot asked per holding shows its name above the fields, so each field names only its holding.
-  const label = field.holding?.label ?? field.pot.label
-  const isPension = field.pot.kind === 'pension'
+  // A group asked per balance shows its name above the fields, so each field names only its balance.
+  const label = field.balance?.label ?? field.group.label
+  const isPension = field.group.kind === 'pension'
   const amountError = errors?.amount && (showBlankErrors || entry.amount.trim() !== '') ? errors.amount : null
   const asOfError = errors?.asOf && (showBlankErrors || entry.asOf !== '') ? errors.asOf : null
 

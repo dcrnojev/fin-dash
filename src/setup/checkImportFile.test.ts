@@ -11,9 +11,9 @@ const bundle = {
     lastWriteAppVersion: null,
   },
   people: [{ id: 'pa', name: 'Partner A', role: 'adult', note: null }],
-  pots: [],
-  holdings: [],
-  snapshots: [],
+  groups: [],
+  balances: [],
+  monthEndBalances: [],
   contributions: [],
   months: [],
 }

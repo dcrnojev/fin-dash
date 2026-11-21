@@ -14,5 +14,6 @@ export type {
   SpreadsheetRef,
   SpreadsheetTabs,
   TabLayout,
+  TabRename,
   TabRows,
 } from './types'

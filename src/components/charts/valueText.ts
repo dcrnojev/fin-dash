@@ -1,13 +1,13 @@
-import { monthFigure, potFigure } from '../../calc/monthFigure'
-import type { MonthTotal, QualifiedCents } from '../../calc/snapshotHistory'
+import type { MonthTotal, QualifiedCents } from '../../calc/monthEndHistory'
+import { groupFigure, monthFigure } from '../../calc/monthFigure'
 import { displayFigure } from '../../format'
 
-// A pot's value in a month: undefined when the pot is not tracked yet, null when it is unknown.
-export function potValueText(value: QualifiedCents | null | undefined, hidden: boolean): string {
+// A group's value in a month: undefined when the group is not tracked yet, null when it is unknown.
+export function groupValueText(value: QualifiedCents | null | undefined, hidden: boolean): string {
   if (value === undefined)
     return ''
 
-  return value === null ? 'unknown' : displayFigure(potFigure(value), hidden)
+  return value === null ? 'unknown' : displayFigure(groupFigure(value), hidden)
 }
 
 export function totalText(month: MonthTotal, hidden: boolean): string {

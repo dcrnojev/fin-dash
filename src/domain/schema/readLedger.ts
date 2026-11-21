@@ -1,14 +1,14 @@
 import type { Issue, Ledger, TabName } from '../types.ts'
+import { balancesTab } from './balancesTab.ts'
 import { checkReferences } from './checkReferences.ts'
 import { contributionsTab } from './contributionsTab.ts'
 import { decodeTab } from './decodeTab.ts'
-import { holdingsTab } from './holdingsTab.ts'
+import { groupsTab } from './groupsTab.ts'
 import { metaFromEntries } from './meta.ts'
 import { metaTab } from './metaTab.ts'
+import { monthEndBalancesTab } from './monthEndBalancesTab.ts'
 import { monthsTab } from './monthsTab.ts'
 import { peopleTab } from './peopleTab.ts'
-import { potsTab } from './potsTab.ts'
-import { snapshotsTab } from './snapshotsTab.ts'
 import type { Cell, TabSpec } from './tabSpec.ts'
 
 export type TabValues = Partial<Record<TabName, readonly (readonly Cell[])[]>>
@@ -32,9 +32,9 @@ export function readLedger(tabs: TabValues): Ledger {
   const checked = checkReferences(
     {
       people: decode(peopleTab),
-      pots: decode(potsTab),
-      holdings: decode(holdingsTab),
-      snapshots: decode(snapshotsTab),
+      groups: decode(groupsTab),
+      balances: decode(balancesTab),
+      monthEndBalances: decode(monthEndBalancesTab),
       contributions: decode(contributionsTab),
     },
     issues

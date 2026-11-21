@@ -1,7 +1,7 @@
 import { addMonths } from '../domain/month.ts'
 import type { Month } from '../domain/types.ts'
+import type { MonthTotal } from './monthEndHistory.ts'
 import { monthFigure, type FigureState, type MonthFigure } from './monthFigure.ts'
-import type { MonthTotal } from './snapshotHistory.ts'
 
 // A run of consecutive positions drawn in one style, from position `from` to position `to`.
 export interface SparklineSegment {

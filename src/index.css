@@ -1159,22 +1159,22 @@ td.number {
   white-space: nowrap;
 }
 
-.by-pot {
+.by-group {
   padding: 14px 0 8px;
 }
 
-.by-pot h2 {
+.by-group h2 {
   padding: 0 16px 6px;
   font-size: 15px;
 }
 
-.by-pot ul {
+.by-group ul {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.by-pot-heading {
+.by-group-heading {
   display: flex;
   justify-content: space-between;
   gap: 8px;
@@ -1186,12 +1186,12 @@ td.number {
   text-transform: uppercase;
 }
 
-.by-pot-heading .number {
+.by-group-heading .number {
   color: var(--color-ink-2);
   letter-spacing: 0;
 }
 
-.by-pot-line {
+.by-group-line {
   display: grid;
   grid-template-columns: 10px minmax(0, 1fr) auto;
   align-items: center;
@@ -1206,29 +1206,29 @@ td.number {
   border-radius: 3px;
 }
 
-.by-pot-name {
+.by-group-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.by-pot-value {
+.by-group-value {
   font-weight: 600;
 }
 
-.by-pot-owner {
+.by-group-owner {
   grid-column: 2;
   color: var(--color-muted);
   font-size: 12px;
 }
 
-.by-pot-line .change {
+.by-group-line .change {
   grid-column: 3;
   justify-self: end;
   font-size: 12px;
 }
 
-.by-pot-more {
+.by-group-more {
   display: block;
   padding: 10px 16px 6px;
   font-size: 13.5px;
@@ -1276,6 +1276,15 @@ td.number {
 }
 
 /* Setup */
+
+.update-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding-left: 20px;
+  font-size: 14px;
+}
 
 .setup-summary {
   display: flex;
@@ -1336,7 +1345,7 @@ td.number {
   align-items: flex-start;
 }
 
-/* Forms: closing and editing a month, pots and holdings */
+/* Forms: closing and editing a month, groups and balances */
 
 .screen {
   display: flex;
@@ -1401,7 +1410,7 @@ td.number {
   font-size: 12.5px;
 }
 
-.close-pot {
+.close-group {
   display: grid;
   grid-column: 1 / -1;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
@@ -1413,13 +1422,13 @@ td.number {
   border-radius: var(--radius);
 }
 
-.close-pot legend {
+.close-group legend {
   padding: 0 4px;
   font-size: 14.5px;
   font-weight: 650;
 }
 
-.close-pot > .close-hint {
+.close-group > .close-hint {
   grid-column: 1 / -1;
 }
 
@@ -1462,8 +1471,8 @@ td.number {
   overflow-wrap: anywhere;
 }
 
-.pot-list,
-.holding-list {
+.group-list,
+.balance-list {
   display: flex;
   flex-direction: column;
   margin: 0;
@@ -1479,18 +1488,18 @@ td.number {
   text-transform: uppercase;
 }
 
-.pot-item {
+.group-item {
   padding-top: 12px;
   border-top: 1px solid var(--chart-grid);
 }
 
-.pot-item:first-child {
+.group-item:first-child {
   padding-top: 0;
   border-top: none;
 }
 
-.pot-heading,
-.holding-list li {
+.group-heading,
+.balance-list li {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -1499,32 +1508,32 @@ td.number {
   font-size: 14px;
 }
 
-.pot-heading strong {
+.group-heading strong {
   font-weight: 600;
 }
 
-.pot-heading > .link-button,
-.holding-list li > .link-button {
+.group-heading > .link-button,
+.balance-list li > .link-button {
   margin-left: auto;
   font-size: 13.5px;
 }
 
-.pot-item > p {
+.group-item > p {
   font-size: 13px;
 }
 
-.holding-list {
+.balance-list {
   gap: 6px;
   margin-top: 8px;
   padding-left: 16px;
   border-left: 2px solid var(--color-border);
 }
 
-.holding-list li {
+.balance-list li {
   color: var(--color-ink-2);
 }
 
-/* Takes a whole line of the pot or holding it replaces, so the fields are never squeezed beside other text. */
+/* Takes a whole line of the group or balance it replaces, so the fields are never squeezed beside other text. */
 .edit-form {
   display: flex;
   flex: 1 1 100%;

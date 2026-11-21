@@ -17,7 +17,7 @@ const iconPaths = {
       <path d="M3 8h14M7 11h2M11 11h2M7 14h2" />
     </>
   ),
-  pots: (
+  portfolio: (
     <>
       <path d="m10 3 7 3.5-7 3.5-7-3.5z" />
       <path d="m3 10 7 3.5 7-3.5M3 13.5 10 17l7-3.5" />

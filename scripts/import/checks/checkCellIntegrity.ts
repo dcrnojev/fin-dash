@@ -1,5 +1,5 @@
 import { sumCents } from '../../../src/domain/money.ts'
-import type { Contribution, Snapshot } from '../../../src/domain/types.ts'
+import type { Contribution, MonthEndBalance } from '../../../src/domain/types.ts'
 import { cashBalanceSheetName, type CashBalanceSheet } from '../cashBalanceSheet.ts'
 import { formatEuros } from '../formatEuros.ts'
 import type { OmfSheet } from '../omfSheet.ts'
@@ -8,16 +8,16 @@ import type { CheckDifference, CheckResult } from './checkResult.ts'
 import { importedTotalsBySourceRef } from './importedValues.ts'
 
 // R1: every legacy amount cell is fully accounted for. The parts of each cell add up to its cached value to the cent, and
-// the rows imported from a cell add up to that value too, which still holds once inline sums are split into holdings.
+// the rows imported from a cell add up to that value too, which still holds once inline sums are split into balances.
 export function checkCellIntegrity(
   cashBalance: CashBalanceSheet,
   chosenRows: ReadonlySet<number>,
-  snapshots: readonly Snapshot[],
+  monthEndBalances: readonly MonthEndBalance[],
   omf: OmfSheet,
   contributions: readonly Contribution[]
 ): CheckResult {
   const differences: CheckDifference[] = []
-  const importedBySourceRef = importedTotalsBySourceRef(snapshots)
+  const importedBySourceRef = importedTotalsBySourceRef(monthEndBalances)
 
   const amounts = cashBalance.rows.flatMap(row => row.amounts.map(amount => ({ amount, chosen: chosenRows.has(row.row) })))
   let importedCells = 0
@@ -69,7 +69,7 @@ export function checkCellIntegrity(
       `${amounts.length} amount cells in ${cashBalanceSheetName}, ${inlineSumCount} of them inline sums`,
       `${importedCells} of them on month-end rows, compared with the rows imported from them`,
       `${omf.rows.length} ${omf.sheet.name} payment cells against ${contributions.length} contribution rows`,
-      `${balanceCells.length} ${omf.sheet.name} balance cells against their snapshots`,
+      `${balanceCells.length} ${omf.sheet.name} balance cells against their month-end balances`,
     ],
     differences,
   }

@@ -1,9 +1,9 @@
 import { serialToIsoDate } from '../../src/domain/date.ts'
 import { hasMoreThanTwoDecimals, toCents } from '../../src/domain/money.ts'
 import { monthOfDate } from '../../src/domain/month.ts'
-import type { Cents, IsoDate, PotId } from '../../src/domain/types.ts'
+import type { Cents, GroupId, IsoDate } from '../../src/domain/types.ts'
 import { inlineSumParts } from './legacyFormula.ts'
-import { cashPotId, sharedPotColumns, type LegacyPerson } from './legacyPots.ts'
+import { cashGroupId, sharedGroupColumns, type LegacyPerson } from './legacyGroups.ts'
 import { cellAt, columnIndex, findHeaderRow, headerText, isEmptyCell, type LegacyCell, type LegacySheet } from './legacySheet.ts'
 
 export const cashBalanceSheetName = 'CashBalance 2023-2024'
@@ -18,7 +18,7 @@ const helperHeaders = new Map([
 
 export type ColumnRole =
   | { kind: 'date'; header: string }
-  | { kind: 'pot'; header: string; pot: PotId }
+  | { kind: 'group'; header: string; group: GroupId }
   // Totals and diffs, used only to reconcile. An empty header is a column of formulas with no header cell.
   | { kind: 'derived'; header: string }
   | { kind: 'helper'; header: string; reason: string }
@@ -37,13 +37,13 @@ export type AmountForm = 'number' | 'constant-formula' | 'inline-sum' | 'other-f
 export interface LegacyAmount {
   address: string
   header: string
-  pot: PotId
+  group: GroupId
   cachedCents: Cents
   form: AmountForm
   parts: AmountPart[]
 }
 
-export interface LegacySnapshotRow {
+export interface LegacyReadingRow {
   row: number
   date: IsoDate
   dateAddress: string
@@ -60,7 +60,7 @@ export interface CashBalanceSheet {
   headerRow: number
   people: LegacyPerson[]
   roles: ReadonlyMap<string, ColumnRole>
-  rows: LegacySnapshotRow[]
+  rows: LegacyReadingRow[]
   problems: CellProblem[]
   monthHelperMismatches: string[]
 }
@@ -79,7 +79,7 @@ export function readCashBalance(sheet: LegacySheet): CashBalanceSheet {
     throw new Error(`${sheet.name}: no ${dateHeader} column.`)
 
   const dataRows = [...new Set([...sheet.cells.values()].map(cell => cell.row))].filter(row => row > headerRow).sort((a, b) => a - b)
-  const rows: LegacySnapshotRow[] = []
+  const rows: LegacyReadingRow[] = []
   const problems: CellProblem[] = []
   const monthHelperMismatches: string[] = []
 
@@ -103,7 +103,7 @@ export function readCashBalance(sheet: LegacySheet): CashBalanceSheet {
     for (const [column, role] of roles) {
       const cell = cellAt(sheet, column, row)
 
-      if (role.kind !== 'pot' || cell === undefined || isEmptyCell(cell))
+      if (role.kind !== 'group' || cell === undefined || isEmptyCell(cell))
         continue
 
       if (typeof cell.value !== 'number') {
@@ -111,7 +111,7 @@ export function readCashBalance(sheet: LegacySheet): CashBalanceSheet {
         continue
       }
 
-      amounts.push(readAmount(cell, cell.value, role.header, role.pot))
+      amounts.push(readAmount(cell, cell.value, role.header, role.group))
     }
 
     rows.push({ row, date, dateAddress: dateCell.address, amounts })
@@ -120,9 +120,9 @@ export function readCashBalance(sheet: LegacySheet): CashBalanceSheet {
   return { sheet, headerRow, people, roles, rows, problems, monthHelperMismatches }
 }
 
-function readAmount(cell: LegacyCell, cachedValue: number, header: string, pot: PotId): LegacyAmount {
+function readAmount(cell: LegacyCell, cachedValue: number, header: string, group: GroupId): LegacyAmount {
   const cachedCents = toCents(cachedValue)
-  const base = { address: cell.address, header, pot, cachedCents }
+  const base = { address: cell.address, header, group, cachedCents }
 
   if (cell.formula === null)
     return { ...base, form: 'number', parts: [part(1, String(cachedValue), cachedValue)] }
@@ -152,13 +152,13 @@ function columnRoles(sheet: LegacySheet, headerRow: number): { roles: Map<string
 
   for (const column of columns) {
     const header = headerText(cellAt(sheet, column, headerRow))
-    const shared = sharedPotColumns.find(potColumn => potColumn.header === header)
+    const shared = sharedGroupColumns.find(groupColumn => groupColumn.header === header)
     const helperReason = helperHeaders.get(header)
 
     if (header === dateHeader)
       roles.set(column, { kind: 'date', header })
     else if (shared !== undefined)
-      roles.set(column, { kind: 'pot', header, pot: shared.pot })
+      roles.set(column, { kind: 'group', header, group: shared.group })
     else if (derivedHeaders.has(header))
       roles.set(column, { kind: 'derived', header })
     else if (helperReason !== undefined)
@@ -172,15 +172,15 @@ function columnRoles(sheet: LegacySheet, headerRow: number): { roles: Map<string
   if (personColumns.length !== 2)
     throw new Error(`${sheet.name}: expected two partner cash columns besides the known headers, found ${personColumns.length}.`)
 
-  const missingShared = sharedPotColumns.filter(potColumn => ![...roles.values()].some(role => role.header === potColumn.header))
+  const missingShared = sharedGroupColumns.filter(groupColumn => ![...roles.values()].some(role => role.header === groupColumn.header))
 
   if (missingShared.length > 0)
-    throw new Error(`${sheet.name}: missing columns ${missingShared.map(potColumn => potColumn.header).join(', ')}.`)
+    throw new Error(`${sheet.name}: missing columns ${missingShared.map(groupColumn => groupColumn.header).join(', ')}.`)
 
   const people = personColumns.map(({ column, header }, index): LegacyPerson => ({ letter: index === 0 ? 'a' : 'b', name: header, column }))
 
   for (const person of people)
-    roles.set(person.column, { kind: 'pot', header: person.name, pot: cashPotId(person) })
+    roles.set(person.column, { kind: 'group', header: person.name, group: cashGroupId(person) })
 
   return { roles, people }
 }

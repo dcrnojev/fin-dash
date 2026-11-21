@@ -25,6 +25,11 @@ export interface CellUpdate {
   value: CellValue
 }
 
+export interface TabRename {
+  from: string
+  to: string
+}
+
 export type ColumnFormat = 'plain-text' | 'money' | 'date' | 'automatic'
 
 // How a tab looks: its header row is frozen and bold, and each column, by position, gets a format.
@@ -76,6 +81,11 @@ export interface DataStore {
   appendRows(spreadsheetId: string, tab: string, rows: readonly CellValue[][]): Promise<void>
   // Overwrites exactly these cells with raw values, all in one request; every other cell stays as it is.
   updateCells(spreadsheetId: string, updates: readonly CellUpdate[]): Promise<void>
+  // Renames tabs and overwrites cells in one request that applies whole or not at all. Each update names its tab as it is
+  // called before the renames.
+  renameTabsAndUpdateCells(spreadsheetId: string, renames: readonly TabRename[], updates: readonly CellUpdate[]): Promise<void>
+  // A copy of the whole spreadsheet under a new title, which the app can open like one it created.
+  copySpreadsheet(spreadsheetId: string, title: string): Promise<SpreadsheetRef>
   // Replaces the contents from A1 of each tab, all in one request.
   writeTabs(spreadsheetId: string, tabs: readonly TabRows[]): Promise<void>
   // Reads the requested tabs in one request. Tabs the spreadsheet does not have are left out of the result.

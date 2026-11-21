@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Cents, Month } from '../domain/types.ts'
 import { sparkline } from './sparkline.ts'
-import type { MonthTotal } from './snapshotHistory.ts'
+import type { MonthTotal } from './monthEndHistory.ts'
 
 const empty: Omit<MonthTotal, 'month'> = { isGap: false, total: null, estimatedTotal: null, knownPart: null, knownPartIncludesEstimates: false }
 

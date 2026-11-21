@@ -47,7 +47,7 @@ function inputLines({ cashFlowPath, billsPath, billsFound, result }: ReportInput
   ]
 }
 
-function resultLines({ bundle, cashBalance, omf, selection, labelGroups, pensionPot }: CashFlowImport): string[] {
+function resultLines({ bundle, cashBalance, omf, selection, labelSlots, pensionGroup }: CashFlowImport): string[] {
   const amounts = cashBalance.rows.flatMap(row => row.amounts)
   const parts = amounts.flatMap(amount => amount.parts)
   const monthEndAmounts = selection.months.flatMap(choice => choice.chosen?.item.amounts ?? [])
@@ -66,24 +66,24 @@ function resultLines({ bundle, cashBalance, omf, selection, labelGroups, pension
 
   const tabCounts = Object.entries({
     people: bundle.people,
-    pots: bundle.pots,
-    holdings: bundle.holdings,
-    snapshots: bundle.snapshots,
+    groups: bundle.groups,
+    balances: bundle.balances,
+    monthEndBalances: bundle.monthEndBalances,
     contributions: bundle.contributions,
     months: bundle.months,
   })
 
   return [
-    `- Legacy snapshot rows read: ${cashBalance.rows.length}; ${selection.outsideWindows.length} fall outside every month-end window.`,
+    `- Legacy reading rows read: ${cashBalance.rows.length}; ${selection.outsideWindows.length} fall outside every month-end window.`,
     `- Months: ${bundle.months.length} (${monthRange}): ${legacyMonthCount} legacy, ${gapMonths.length} gap (${gapMonths.join(', ')}).`,
     `- Rows per clean tab: ${tabCounts.map(([tab, rows]) => `${tab} ${rows.length}`).join(', ')}.`,
     `- Amount cells in \`${cashBalance.sheet.name}\`: ${amounts.length}; ${formCounts}.`,
     `- Zero amounts: ${amounts.filter(amount => amount.cachedCents === 0).length}.`,
     `- Parts with more than two decimals: ${extraDecimalParts}; negative parts: ${negativeParts}.`,
-    `- Inline sums on month-end rows, imported as one pot-level row each: ${importedInlineSums.length}, in ${labelGroups.length} label groups.`,
-    `- \`${omf.sheet.name}\`: ${omf.rows.length} payment rows as ${bundle.contributions.length} contribution rows of \`${pensionPot}\`.`,
+    `- Inline sums on month-end rows, imported as one group-level row each: ${importedInlineSums.length}, in ${labelSlots.length} label slots.`,
+    `- \`${omf.sheet.name}\`: ${omf.rows.length} payment rows as ${bundle.contributions.length} contribution rows of \`${pensionGroup}\`.`,
     `  Months with several payments, summed into one row with a note: ${summedContributions.length}.`,
-    `  Balances imported as snapshots: ${balances.length}.`,
+    `  Balance cells imported as month-end balances: ${balances.length}.`,
   ]
 }
 

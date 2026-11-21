@@ -1,5 +1,5 @@
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import type { PotGroupHistory, PotGroupMonth } from '../../calc/snapshotHistory'
+import type { KindHistory, KindMonth } from '../../calc/monthEndHistory'
 import type { Month } from '../../domain/types'
 import { ChartBody, type ChartView } from './ChartBody'
 import { chartMargin, euroAxisProps, gridProps } from './chartChrome'
@@ -11,30 +11,30 @@ import { MonthTooltip } from './MonthTooltip'
 import { totalValue } from './qualityLines'
 import { seriesColor } from './seriesColor'
 import { lineStateEntries } from './stateEntries'
-import { potValueText, totalText } from './valueText'
+import { groupValueText, totalText } from './valueText'
 
-const cashNote = 'Month-end balances. ≈ estimated on a straight line between two measured months; ≥ at least, where a pot cannot be estimated.'
+const cashNote = 'Month-end balances. ≈ estimated on a straight line between two measured months; ≥ at least, where a group cannot be estimated.'
 
 interface CashChartProps {
-  history: PotGroupHistory
+  history: KindHistory
   hideAmounts: boolean
   view: ChartView
   editableMonths: ReadonlySet<Month>
 }
 
-// Total cash as the heavy line, each cash pot as its own thin line. Lines rather than a stack, because a cash pot can
-// go negative (an overdraft) and an unknown pot would otherwise leave a hole in the middle of a stack.
+// Total cash as the heavy line, each cash group as its own thin line. Lines rather than a stack, because a cash group can
+// go negative (an overdraft) and an unknown group would otherwise leave a hole in the middle of a stack.
 export function CashChart({ history, hideAmounts, view, editableMonths }: CashChartProps) {
-  const { pots, months } = history
+  const { groups, months } = history
   const knownParts = months.map(month => month.knownPart)
 
-  const series: ChartSeries<PotGroupMonth>[] = [
-    ...pots.map((pot, position): ChartSeries<PotGroupMonth> => ({
-      key: pot.id,
-      label: pot.label,
+  const series: ChartSeries<KindMonth>[] = [
+    ...groups.map((group, position): ChartSeries<KindMonth> => ({
+      key: group.id,
+      label: group.label,
       color: seriesColor(position),
       mark: 'line',
-      text: month => potValueText(month.potValues.get(pot.id), hideAmounts),
+      text: month => groupValueText(month.groupValues.get(group.id), hideAmounts),
     })),
     { key: 'total', label: 'Total cash', color: 'var(--chart-total)', mark: 'line', text: month => totalText(month, hideAmounts) },
   ]
@@ -60,12 +60,12 @@ export function CashChart({ history, hideAmounts, view, editableMonths }: CashCh
             isAnimationActive={false}
           />
 
-          {pots.map((pot, position) => (
+          {groups.map((group, position) => (
             <MeasuredAndEstimatedLine
-              key={pot.id}
-              name={pot.label}
+              key={group.id}
+              name={group.label}
               months={months}
-              values={months.map(month => month.potValues.get(pot.id))}
+              values={months.map(month => month.groupValues.get(group.id))}
               color={seriesColor(position)}
               strokeWidth={2}
             />
@@ -80,7 +80,7 @@ export function CashChart({ history, hideAmounts, view, editableMonths }: CashCh
           />
           <Line
             dataKey="knownPart"
-            name="Known pots only"
+            name="Known groups only"
             stroke="var(--chart-total)"
             strokeWidth={2}
             strokeDasharray="4 4"

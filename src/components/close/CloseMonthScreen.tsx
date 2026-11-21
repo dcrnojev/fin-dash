@@ -5,7 +5,7 @@ import { closeReview } from '../../close/closeReview'
 import { closeRows } from '../../close/closeRows'
 import { closesBeforeMonthEnd } from '../../close/closesEarly'
 import { writeClose, type WrittenClose } from '../../close/writeClose'
-import { snapshotHistory } from '../../calc/snapshotHistory'
+import { monthEndHistory } from '../../calc/monthEndHistory'
 import { localIsoDate } from '../../domain/date'
 import { addMonths } from '../../domain/month'
 import type { IsoDate, Ledger, Month } from '../../domain/types'
@@ -33,7 +33,7 @@ interface CloseMonthScreenProps {
 
 export function CloseMonthScreen({ ledger, month, spreadsheetId, closedBy, onClosed, onBack, onReread }: CloseMonthScreenProps) {
   const form = useMemo(() => closeForm(ledger, month, 'close'), [ledger, month])
-  const history = useMemo(() => snapshotHistory(ledger), [ledger])
+  const history = useMemo(() => monthEndHistory(ledger), [ledger])
   const [entries, setEntries] = useState(() => initialEntries(form))
   const [step, setStep] = useState<CloseStep>({ status: 'editing' })
   const [earlyConfirmed, setEarlyConfirmed] = useState(false)
@@ -50,7 +50,7 @@ export function CloseMonthScreen({ ledger, month, spreadsheetId, closedBy, onClo
 
     try {
       const rows = closeRows(month, fields, localIsoDate(new Date()), closedBy)
-      const written = await writeClose(spreadsheetId, rows, ledger.snapshots.filter(snapshot => snapshot.month === month))
+      const written = await writeClose(spreadsheetId, rows, ledger.monthEndBalances.filter(monthEndBalance => monthEndBalance.month === month))
       onClosed(closedMessage(monthName, written))
     } catch (error) {
       setStep({ status: 'failed', fields, message: error instanceof Error ? error.message : String(error) })
@@ -72,7 +72,7 @@ export function CloseMonthScreen({ ledger, month, spreadsheetId, closedBy, onClo
     return (
       <section className="screen">
         {header}
-        <p className="panel muted">No cash, investment or pension pot is open in {monthName}, so there is nothing to enter.</p>
+        <p className="panel muted">No cash, investment or pension group is open in {monthName}, so there is nothing to enter.</p>
       </section>
     )
   }
@@ -90,7 +90,7 @@ export function CloseMonthScreen({ ledger, month, spreadsheetId, closedBy, onClo
             {reviewedOn}); each pension value as of its statement date. Pension stays out of the investment total.
           </p>
 
-          <CloseReviewTable groups={closeReview(step.fields, history, month)} monthName={monthName} lastMonthName={lastMonthName} />
+          <CloseReviewTable sections={closeReview(step.fields, history, month)} monthName={monthName} lastMonthName={lastMonthName} />
 
           {closesEarly && (
             <div className="notice">
@@ -153,10 +153,10 @@ export function CloseMonthScreen({ ledger, month, spreadsheetId, closedBy, onClo
 }
 
 function closedMessage(monthName: string, written: WrittenClose): string {
-  const wrote = `${monthName} is closed: wrote ${countOf(written.snapshotRowsWritten, 'snapshot row')} and the months row.`
+  const wrote = `${monthName} is closed: wrote ${countOf(written.monthEndBalanceRowsWritten, 'month-end balance row')} and the months row.`
 
-  if (written.snapshotRowsKept === 0)
+  if (written.monthEndBalanceRowsKept === 0)
     return wrote
 
-  return `${wrote} The ${countOf(written.snapshotRowsKept, 'value')} the sheet already had, shown read-only, stayed as stored.`
+  return `${wrote} The ${countOf(written.monthEndBalanceRowsKept, 'value')} the sheet already had, shown read-only, stayed as stored.`
 }

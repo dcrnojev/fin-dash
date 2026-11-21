@@ -72,7 +72,7 @@ export function Sidebar({ route, hasSpreadsheet, summary, open, account, onNavig
           summary?.closeDue && <span className="due-badge">Due</span>
         )}
         {item({ page: 'months' }, 'Months', 'months', hasSpreadsheet)}
-        {item({ page: 'pots' }, 'Pots and holdings', 'pots', hasSpreadsheet && summary?.canWrite !== false)}
+        {item({ page: 'portfolio' }, 'Portfolio', 'portfolio', hasSpreadsheet && summary?.canWrite !== false)}
 
         {soonItems.map(({ group, items }) => (
           <div key={group}>

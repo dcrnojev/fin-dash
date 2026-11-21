@@ -1,12 +1,12 @@
 import { householdOwner } from '../ids.ts'
 import { monthIndex } from '../month.ts'
-import type { Contribution, Holding, HoldingId, Issue, Person, Pot, PotId, RowRef, Snapshot, TabName } from '../types.ts'
+import type { Balance, BalanceId, Contribution, Group, GroupId, Issue, MonthEndBalance, Person, RowRef, TabName } from '../types.ts'
 
 export interface ReferenceTabs {
   people: Person[]
-  pots: Pot[]
-  holdings: Holding[]
-  snapshots: Snapshot[]
+  groups: Group[]
+  balances: Balance[]
+  monthEndBalances: MonthEndBalance[]
   contributions: Contribution[]
 }
 
@@ -20,144 +20,145 @@ export function checkReferences(tabs: ReferenceTabs, issues: Issue[]): Reference
 
   const personIds = new Set<string>(tabs.people.map(person => person.id))
 
-  const pots = tabs.pots.filter(pot => {
-    if (pot.owner === householdOwner || personIds.has(pot.owner))
+  const groups = tabs.groups.filter(group => {
+    if (group.owner === householdOwner || personIds.has(group.owner))
       return true
 
-    report('error', 'pots', null, 'owner', 'unknown-owner', `Pot ${pot.id}: owner ${pot.owner} is neither a person id nor ${householdOwner}.`)
+    const message = `Group ${group.id}: owner ${group.owner} is neither a person id nor ${householdOwner}.`
+    report('error', 'groups', null, 'owner', 'unknown-owner', message)
     return false
   })
 
-  const potsById = new Map<PotId, Pot>(pots.map(pot => [pot.id, pot]))
-  const potLabels = new Set<string>()
+  const groupsById = new Map<GroupId, Group>(groups.map(group => [group.id, group]))
+  const groupLabels = new Set<string>()
 
-  const holdings = tabs.holdings.filter(holding => {
-    if (holding.owner !== householdOwner && !personIds.has(holding.owner)) {
-      const message = `Holding ${holding.id}: owner ${holding.owner} is neither a person id nor ${householdOwner}.`
-      report('error', 'holdings', null, 'owner', 'unknown-owner', message)
+  const balances = tabs.balances.filter(balance => {
+    if (balance.owner !== householdOwner && !personIds.has(balance.owner)) {
+      const message = `Balance ${balance.id}: owner ${balance.owner} is neither a person id nor ${householdOwner}.`
+      report('error', 'balances', null, 'owner', 'unknown-owner', message)
       return false
     }
 
-    if (!potsById.has(holding.pot)) {
-      report('error', 'holdings', null, 'pot_id', 'unknown-pot', `Holding ${holding.id}: pot ${holding.pot} does not exist.`)
+    if (!groupsById.has(balance.group)) {
+      report('error', 'balances', null, 'group_id', 'unknown-group', `Balance ${balance.id}: group ${balance.group} does not exist.`)
       return false
     }
 
-    const labelKey = `${holding.pot}|${holding.label}`
+    const labelKey = `${balance.group}|${balance.label}`
 
-    if (potLabels.has(labelKey)) {
-      report('error', 'holdings', null, 'label', 'duplicate-label', `Pot ${holding.pot} already has a holding labelled ${holding.label}.`)
+    if (groupLabels.has(labelKey)) {
+      report('error', 'balances', null, 'label', 'duplicate-label', `Group ${balance.group} already has a balance labelled ${balance.label}.`)
       return false
     }
 
-    potLabels.add(labelKey)
+    groupLabels.add(labelKey)
     return true
   })
 
-  const holdingsById = new Map<HoldingId, Holding>(holdings.map(holding => [holding.id, holding]))
+  const balancesById = new Map<BalanceId, Balance>(balances.map(balance => [balance.id, balance]))
 
-  const fitsPotAndHolding = (tab: TabName, row: Snapshot | Contribution): boolean => {
-    const pot = potsById.get(row.pot)
+  const fitsGroupAndBalance = (tab: TabName, row: MonthEndBalance | Contribution): boolean => {
+    const group = groupsById.get(row.group)
 
-    if (pot === undefined) {
-      report('error', tab, row.ref, 'pot_id', 'unknown-pot', `Pot ${row.pot} does not exist in the pots tab.`)
+    if (group === undefined) {
+      report('error', tab, row.ref, 'group_id', 'unknown-group', `Group ${row.group} does not exist in the groups tab.`)
       return false
     }
 
-    if (row.holding !== null && holdingsById.get(row.holding)?.pot !== row.pot) {
-      report('error', tab, row.ref, 'holding_id', 'unknown-holding', `Holding ${row.holding} is not a holding of pot ${row.pot}.`)
+    if (row.balance !== null && balancesById.get(row.balance)?.group !== row.group) {
+      report('error', tab, row.ref, 'balance_id', 'unknown-balance', `Balance ${row.balance} is not a balance of group ${row.group}.`)
       return false
     }
 
-    if (pot.opened !== null && monthIndex(row.month) < monthIndex(pot.opened)) {
-      report('error', tab, row.ref, 'month', 'before-pot-opened', `Pot ${row.pot} opened in ${pot.opened}, after ${row.month}.`)
+    if (group.opened !== null && monthIndex(row.month) < monthIndex(group.opened)) {
+      report('error', tab, row.ref, 'month', 'before-group-opened', `Group ${row.group} opened in ${group.opened}, after ${row.month}.`)
       return false
     }
 
-    if (pot.closed !== null && monthIndex(row.month) > monthIndex(pot.closed)) {
-      report('error', tab, row.ref, 'month', 'after-pot-closed', `Pot ${row.pot} closed in ${pot.closed}, before ${row.month}.`)
+    if (group.closed !== null && monthIndex(row.month) > monthIndex(group.closed)) {
+      report('error', tab, row.ref, 'month', 'after-group-closed', `Group ${row.group} closed in ${group.closed}, before ${row.month}.`)
       return false
     }
 
     return true
   }
 
-  const snapshotsWithPots = tabs.snapshots.filter(snapshot => {
-    if (!fitsPotAndHolding('snapshots', snapshot))
+  const monthEndBalancesWithGroups = tabs.monthEndBalances.filter(monthEndBalance => {
+    if (!fitsGroupAndBalance('month_end_balances', monthEndBalance))
       return false
 
-    if (snapshot.value >= 0)
+    if (monthEndBalance.value >= 0)
       return true
 
-    if (potsById.get(snapshot.pot)?.kind === 'cash') {
-      report('warning', 'snapshots', snapshot.ref, 'value', 'overdraft', 'A negative cash balance; check that this is an overdraft.')
+    if (groupsById.get(monthEndBalance.group)?.kind === 'cash') {
+      report('warning', 'month_end_balances', monthEndBalance.ref, 'value', 'overdraft', 'A negative cash value; check that this is an overdraft.')
       return true
     }
 
-    report('error', 'snapshots', snapshot.ref, 'value', 'negative-value', 'Values are entered as positive numbers.')
+    report('error', 'month_end_balances', monthEndBalance.ref, 'value', 'negative-value', 'Values are entered as positive numbers.')
     return false
   })
 
   return {
     people: tabs.people,
-    pots,
-    holdings,
-    snapshots: withEitherPotOrHoldingRows(snapshotsWithPots, report),
-    contributions: withValidOpenings(tabs.contributions.filter(row => fitsPotAndHolding('contributions', row)), report),
+    groups,
+    balances,
+    monthEndBalances: withEitherGroupOrBalanceRows(monthEndBalancesWithGroups, report),
+    contributions: withValidOpenings(tabs.contributions.filter(row => fitsGroupAndBalance('contributions', row)), report),
   }
 }
 
-// For a month and pot there is either one row with a blank holding or one row per holding, never both.
-function withEitherPotOrHoldingRows(snapshots: Snapshot[], report: Report): Snapshot[] {
-  const levelsByMonthAndPot = new Map<string, Set<'pot' | 'holding'>>()
-  const monthAndPot = (snapshot: Snapshot) => `${snapshot.month}|${snapshot.pot}`
+// For a month and group there is either one row with a blank balance or one row per balance, never both.
+function withEitherGroupOrBalanceRows(monthEndBalances: MonthEndBalance[], report: Report): MonthEndBalance[] {
+  const levelsByMonthAndGroup = new Map<string, Set<'group' | 'balance'>>()
+  const monthAndGroup = (monthEndBalance: MonthEndBalance) => `${monthEndBalance.month}|${monthEndBalance.group}`
 
-  for (const snapshot of snapshots) {
-    const levels = levelsByMonthAndPot.get(monthAndPot(snapshot)) ?? new Set()
-    levels.add(snapshot.holding === null ? 'pot' : 'holding')
-    levelsByMonthAndPot.set(monthAndPot(snapshot), levels)
+  for (const monthEndBalance of monthEndBalances) {
+    const levels = levelsByMonthAndGroup.get(monthAndGroup(monthEndBalance)) ?? new Set()
+    levels.add(monthEndBalance.balance === null ? 'group' : 'balance')
+    levelsByMonthAndGroup.set(monthAndGroup(monthEndBalance), levels)
   }
 
-  return snapshots.filter(snapshot => {
-    if (levelsByMonthAndPot.get(monthAndPot(snapshot))?.size !== 2)
+  return monthEndBalances.filter(monthEndBalance => {
+    if (levelsByMonthAndGroup.get(monthAndGroup(monthEndBalance))?.size !== 2)
       return true
 
-    const message = `Pot ${snapshot.pot} in ${snapshot.month} has both a pot-level row and holding rows; keep one or the other.`
-    report('error', 'snapshots', snapshot.ref, 'holding_id', 'mixed-snapshot-levels', message)
+    const message = `Group ${monthEndBalance.group} in ${monthEndBalance.month} has both a group-level row and balance rows; keep one or the other.`
+    report('error', 'month_end_balances', monthEndBalance.ref, 'balance_id', 'mixed-month-end-levels', message)
     return false
   })
 }
 
-// At most one opening row per pot, and no other row of the pot may come before it.
+// At most one opening row per group, and no other row of the group may come before it.
 function withValidOpenings(contributions: Contribution[], report: Report): Contribution[] {
-  const firstMonthByPot = new Map<PotId, number>()
+  const firstMonthByGroup = new Map<GroupId, number>()
 
   for (const contribution of contributions) {
-    const first = firstMonthByPot.get(contribution.pot)
+    const first = firstMonthByGroup.get(contribution.group)
     const index = monthIndex(contribution.month)
 
     if (first === undefined || index < first)
-      firstMonthByPot.set(contribution.pot, index)
+      firstMonthByGroup.set(contribution.group, index)
   }
 
-  const potsWithOpening = new Set<PotId>()
+  const groupsWithOpening = new Set<GroupId>()
 
   return contributions.filter(contribution => {
     if (contribution.kind !== 'opening')
       return true
 
-    if (potsWithOpening.has(contribution.pot)) {
-      report('error', 'contributions', contribution.ref, 'kind', 'second-opening', `Pot ${contribution.pot} already has an opening row.`)
+    if (groupsWithOpening.has(contribution.group)) {
+      report('error', 'contributions', contribution.ref, 'kind', 'second-opening', `Group ${contribution.group} already has an opening row.`)
       return false
     }
 
-    if (monthIndex(contribution.month) > (firstMonthByPot.get(contribution.pot) ?? Infinity)) {
-      const message = `The opening row of pot ${contribution.pot} must be its earliest row.`
+    if (monthIndex(contribution.month) > (firstMonthByGroup.get(contribution.group) ?? Infinity)) {
+      const message = `The opening row of group ${contribution.group} must be its earliest row.`
       report('error', 'contributions', contribution.ref, 'month', 'late-opening', message)
       return false
     }
 
-    potsWithOpening.add(contribution.pot)
+    groupsWithOpening.add(contribution.group)
     return true
   })
 }

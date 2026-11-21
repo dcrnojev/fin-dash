@@ -1,7 +1,7 @@
 import { useMemo, type ReactNode } from 'react'
+import { monthEndHistory } from '../../calc/monthEndHistory'
 import type { MonthFigure } from '../../calc/monthFigure'
 import { monthRows, type MonthRow } from '../../calc/monthRows'
-import { snapshotHistory } from '../../calc/snapshotHistory'
 import { editableMonths } from '../../close/editableMonths'
 import type { Ledger, Month } from '../../domain/types'
 import { displayFigure, displayLongMonth, displayMonthName } from '../../format'
@@ -19,7 +19,7 @@ interface MonthsScreenProps {
 
 // Every month with its status and totals; a closed or legacy month opens its edit page.
 export function MonthsScreen({ ledger, monthToClose, canWrite, hideAmounts }: MonthsScreenProps) {
-  const rows = useMemo(() => monthRows(snapshotHistory(ledger), ledger.months, monthToClose), [ledger, monthToClose])
+  const rows = useMemo(() => monthRows(monthEndHistory(ledger), ledger.months, monthToClose), [ledger, monthToClose])
   const editable = useMemo(() => new Set(canWrite ? editableMonths(ledger.months) : []), [ledger, canWrite])
   const canClose = canWrite && monthToClose !== null
   const rowRoute = (row: MonthRow): Route | null => rowTarget(row, editable, canClose && row.month === monthToClose)
@@ -93,7 +93,7 @@ export function MonthsScreen({ ledger, monthToClose, canWrite, hideAmounts }: Mo
         </div>
       )}
 
-      <p className="chart-note">≈ estimated between two measured months; ≥ at least, where a pot cannot be estimated. Pension stays out of the totals.</p>
+      <p className="chart-note">≈ estimated between two measured months; ≥ at least, where a group cannot be estimated. Pension stays out of the totals.</p>
     </>
   )
 }

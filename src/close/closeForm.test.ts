@@ -1,34 +1,34 @@
 import { describe, expect, it } from 'vitest'
 import type { Month } from '../domain/types.ts'
 import { closeFields, closeForm } from './closeForm.ts'
-import { holding, pot, snapshot } from './closeTestData.ts'
+import { balance, group, monthEndBalance } from './closeTestData.ts'
 
 const november = '2030-11' as Month
 
 describe('closeForm', () => {
-  it('asks for every pot open in the month, in sort order, and leaves out closed and not yet opened ones', () => {
+  it('asks for every group open in the month, in sort order, and leaves out closed and not yet opened ones', () => {
     const form = closeForm(
       {
-        pots: [
-          pot('cash-b', 'cash', 20),
-          pot('cash-a', 'cash', 10),
-          pot('cash-old', 'cash', 5, { closed: '2030-10' }),
-          pot('cash-new', 'cash', 30, { opened: '2030-12' }),
-          pot('fund', 'investment', 40),
-          pot('pillar', 'pension', 50),
-          pot('car-loan', 'loan', 60),
+        groups: [
+          group('cash-b', 'cash', 20),
+          group('cash-a', 'cash', 10),
+          group('cash-old', 'cash', 5, { closed: '2030-10' }),
+          group('cash-new', 'cash', 30, { opened: '2030-12' }),
+          group('fund', 'investment', 40),
+          group('pillar', 'pension', 50),
+          group('car-loan', 'loan', 60),
         ],
-        holdings: [],
-        snapshots: [],
+        balances: [],
+        monthEndBalances: [],
       },
       november,
       'close'
     )
 
-    expect(form.cash.map(closePot => closePot.pot.id)).toEqual(['cash-a', 'cash-b'])
-    expect(form.investments.map(closePot => closePot.pot.id)).toEqual(['fund'])
-    expect(form.pensions.map(closePot => closePot.pot.id)).toEqual(['pillar'])
-    expect(closeFields(form).map(field => [field.key, field.holding])).toEqual([
+    expect(form.cash.map(closeGroup => closeGroup.group.id)).toEqual(['cash-a', 'cash-b'])
+    expect(form.investments.map(closeGroup => closeGroup.group.id)).toEqual(['fund'])
+    expect(form.pensions.map(closeGroup => closeGroup.group.id)).toEqual(['pillar'])
+    expect(closeFields(form).map(field => [field.key, field.balance])).toEqual([
       ['cash-a', null],
       ['cash-b', null],
       ['fund', null],
@@ -36,16 +36,16 @@ describe('closeForm', () => {
     ])
   })
 
-  it('asks per open holding for an investment pot, with last month as the prefill', () => {
+  it('asks per open balance for an investment group, with last month as the prefill', () => {
     const form = closeForm(
       {
-        pots: [pot('broker', 'investment', 10)],
-        holdings: [
-          holding('broker-x', 'broker'),
-          holding('broker-y', 'broker', { opened: '2030-11' }),
-          holding('broker-old', 'broker', { closed: '2030-10' }),
+        groups: [group('broker', 'investment', 10)],
+        balances: [
+          balance('broker-x', 'broker'),
+          balance('broker-y', 'broker', { opened: '2030-11' }),
+          balance('broker-old', 'broker', { closed: '2030-10' }),
         ],
-        snapshots: [snapshot('2030-10', 'broker', 300_00, 'broker-x'), snapshot('2030-10', 'broker', 50_00, 'broker-old')],
+        monthEndBalances: [monthEndBalance('2030-10', 'broker', 300_00, 'broker-x'), monthEndBalance('2030-10', 'broker', 50_00, 'broker-old')],
       },
       november,
       'close'
@@ -60,12 +60,12 @@ describe('closeForm', () => {
     expect(broker.lastMonthTotalAtOtherLevel).toBeNull()
   })
 
-  it('gives last month as a hint only to a pot that switches from a pot row to holding rows', () => {
+  it('gives last month as a hint only to a group that switches from a group row to balance rows', () => {
     const form = closeForm(
       {
-        pots: [pot('broker', 'investment', 10)],
-        holdings: [holding('broker-x', 'broker', { opened: '2030-11' }), holding('broker-y', 'broker', { opened: '2030-11' })],
-        snapshots: [snapshot('2030-10', 'broker', 500_00)],
+        groups: [group('broker', 'investment', 10)],
+        balances: [balance('broker-x', 'broker', { opened: '2030-11' }), balance('broker-y', 'broker', { opened: '2030-11' })],
+        monthEndBalances: [monthEndBalance('2030-10', 'broker', 500_00)],
       },
       november,
       'close'
@@ -77,15 +77,15 @@ describe('closeForm', () => {
     expect(broker.lastMonthTotalAtOtherLevel).toBe(500_00)
   })
 
-  it('enters a pension pot at pot level with its statement date, and shows rows the month already has', () => {
+  it('enters a pension group at group level with its statement date, and shows rows the month already has', () => {
     const form = closeForm(
       {
-        pots: [pot('pillar', 'pension', 10), pot('cash-a', 'cash', 20)],
-        holdings: [holding('pillar-fund', 'pillar')],
-        snapshots: [
-          snapshot('2030-10', 'pillar', 900_00, null, '2030-10-04'),
-          snapshot('2030-10', 'cash-a', 80_00, null, '2030-10-31'),
-          snapshot('2030-11', 'cash-a', 85_00, null, '2030-11-30'),
+        groups: [group('pillar', 'pension', 10), group('cash-a', 'cash', 20)],
+        balances: [balance('pillar-fund', 'pillar')],
+        monthEndBalances: [
+          monthEndBalance('2030-10', 'pillar', 900_00, null, '2030-10-04'),
+          monthEndBalance('2030-10', 'cash-a', 80_00, null, '2030-10-31'),
+          monthEndBalance('2030-11', 'cash-a', 85_00, null, '2030-11-30'),
         ],
       },
       november,
@@ -105,9 +105,9 @@ describe('closeForm', () => {
   it('asks at the level of the rows the month already has, so no value is asked for and then dropped', () => {
     const form = closeForm(
       {
-        pots: [pot('broker', 'investment', 10), pot('fund', 'investment', 20)],
-        holdings: [holding('broker-x', 'broker'), holding('fund-x', 'fund', { closed: '2030-10' })],
-        snapshots: [snapshot('2030-11', 'broker', 500_00), snapshot('2030-11', 'fund', 70_00, 'fund-x')],
+        groups: [group('broker', 'investment', 10), group('fund', 'investment', 20)],
+        balances: [balance('broker-x', 'broker'), balance('fund-x', 'fund', { closed: '2030-10' })],
+        monthEndBalances: [monthEndBalance('2030-11', 'broker', 500_00), monthEndBalance('2030-11', 'fund', 70_00, 'fund-x')],
       },
       november,
       'close'

@@ -1,4 +1,4 @@
-import type { PotGroupHistory, SnapshotHistory } from '../calc/snapshotHistory.ts'
+import type { KindHistory, MonthEndHistory } from '../calc/monthEndHistory.ts'
 import { sumCents } from '../domain/money.ts'
 import { addMonths } from '../domain/month.ts'
 import type { Cents, Month } from '../domain/types.ts'
@@ -20,7 +20,7 @@ export interface PreviousTotal {
   isEstimated: boolean
 }
 
-export interface ReviewGroup {
+export interface ReviewSection {
   kind: ReviewKind
   total: Cents
   // Last month's total of the kind; null when it is not complete, even with estimates.
@@ -31,8 +31,8 @@ export interface ReviewGroup {
 const reviewKinds: readonly ReviewKind[] = ['cash', 'investment', 'pension']
 
 // The totals of the values about to be written, per kind, next to last month's. Kinds with no field are left out.
-export function closeReview(fields: readonly EnteredField[], history: SnapshotHistory, month: Month): ReviewGroup[] {
-  const groupHistories: Record<ReviewKind, PotGroupHistory> = {
+export function closeReview(fields: readonly EnteredField[], history: MonthEndHistory, month: Month): ReviewSection[] {
+  const kindHistories: Record<ReviewKind, KindHistory> = {
     cash: history.cash,
     investment: history.investments,
     pension: history.pensions,
@@ -40,7 +40,7 @@ export function closeReview(fields: readonly EnteredField[], history: SnapshotHi
 
   return reviewKinds.flatMap(kind => {
     const lines = fields
-      .filter(({ field }) => field.pot.kind === kind)
+      .filter(({ field }) => field.group.kind === kind)
       .map(({ field, entered }): ReviewLine => ({
         key: field.key,
         label: fieldLabel(field),
@@ -52,12 +52,12 @@ export function closeReview(fields: readonly EnteredField[], history: SnapshotHi
       return []
 
     const total = sumCents(lines.map(line => line.value))
-    return [{ kind, total, previous: previousTotal(groupHistories[kind], addMonths(month, -1)), lines }]
+    return [{ kind, total, previous: previousTotal(kindHistories[kind], addMonths(month, -1)), lines }]
   })
 }
 
-function previousTotal(group: PotGroupHistory, previousMonth: Month): PreviousTotal | null {
-  const previous = group.months.find(entry => entry.month === previousMonth)
+function previousTotal(kindHistory: KindHistory, previousMonth: Month): PreviousTotal | null {
+  const previous = kindHistory.months.find(entry => entry.month === previousMonth)
 
   if (previous === undefined)
     return null

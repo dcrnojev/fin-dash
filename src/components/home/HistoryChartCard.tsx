@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { historyRanges, monthsInRange, type HistoryRange } from '../../calc/historyRange'
-import type { PotGroupHistory, SnapshotHistory } from '../../calc/snapshotHistory'
+import type { KindHistory, MonthEndHistory } from '../../calc/monthEndHistory'
 import type { Month } from '../../domain/types'
 import { CashChart } from '../charts/CashChart'
 import type { ChartView } from '../charts/ChartBody'
@@ -27,7 +27,7 @@ const views: { value: ChartView; label: string }[] = [
 ]
 
 interface HistoryChartCardProps {
-  history: SnapshotHistory
+  history: MonthEndHistory
   editableMonths: ReadonlySet<Month>
   hideAmounts: boolean
 }
@@ -39,7 +39,7 @@ export function HistoryChartCard({ history, editableMonths, hideAmounts }: Histo
   const [view, setView] = useState<ChartView>('chart')
 
   const shared = { view, editableMonths, hideAmounts }
-  const inRange = (group: PotGroupHistory): PotGroupHistory => ({ ...group, months: monthsInRange(group.months, range) })
+  const inRange = (group: KindHistory): KindHistory => ({ ...group, months: monthsInRange(group.months, range) })
 
   return (
     <section className="card chart-card" aria-label="History">
@@ -56,8 +56,8 @@ export function HistoryChartCard({ history, editableMonths, hideAmounts }: Histo
       {topic === 'combined' && <CombinedChart months={monthsInRange(history.combined, range)} {...shared} />}
 
       {topic === 'pensions' &&
-        (history.pensions.pots.length === 0 ? (
-          <p className="chart-empty muted">The spreadsheet has no pension pots.</p>
+        (history.pensions.groups.length === 0 ? (
+          <p className="chart-empty muted">The spreadsheet has no pension groups.</p>
         ) : (
           <PensionChart history={inRange(history.pensions)} {...shared} />
         ))}

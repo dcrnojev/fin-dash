@@ -2,17 +2,17 @@ import { describe, expect, it } from 'vitest'
 import type { Month } from '../domain/types.ts'
 import { initialEntries, readEntries, withLastMonthAmount } from './closeEntries.ts'
 import { closeFields, closeForm } from './closeForm.ts'
-import { pot, snapshot } from './closeTestData.ts'
+import { group, monthEndBalance } from './closeTestData.ts'
 
 const november = '2030-11' as Month
 
 const ledger = {
-  pots: [pot('cash-a', 'cash', 10), pot('cash-b', 'cash', 20), pot('fund', 'investment', 30), pot('pillar', 'pension', 40)],
-  holdings: [],
-  snapshots: [
-    snapshot('2030-10', 'cash-a', 1234_56, null, '2030-10-31'),
-    snapshot('2030-10', 'pillar', 900_00, null, '2030-10-04'),
-    snapshot('2030-11', 'cash-b', 70_00, null, '2030-11-30'),
+  groups: [group('cash-a', 'cash', 10), group('cash-b', 'cash', 20), group('fund', 'investment', 30), group('pillar', 'pension', 40)],
+  balances: [],
+  monthEndBalances: [
+    monthEndBalance('2030-10', 'cash-a', 1234_56, null, '2030-10-31'),
+    monthEndBalance('2030-10', 'pillar', 900_00, null, '2030-10-04'),
+    monthEndBalance('2030-11', 'cash-b', 70_00, null, '2030-11-30'),
   ],
 }
 
@@ -83,9 +83,9 @@ describe('readEntries', () => {
     expect(read('2030-11-30').status).toBe('valid')
   })
 
-  it('when editing, takes unchanged rows as stored, lets a pot with no row stay blank and refuses to blank a row', () => {
-    const withPension = [...ledger.snapshots, snapshot('2030-11', 'pillar', 910_00, null, '2030-11-05')]
-    const editForm = closeForm({ ...ledger, snapshots: withPension }, november, 'edit')
+  it('when editing, takes unchanged rows as stored, lets a group with no row stay blank and refuses to blank a row', () => {
+    const withPension = [...ledger.monthEndBalances, monthEndBalance('2030-11', 'pillar', 910_00, null, '2030-11-05')]
+    const editForm = closeForm({ ...ledger, monthEndBalances: withPension }, november, 'edit')
     const unchanged = initialEntries(editForm)
 
     const kept = readEntries(editForm, { ...unchanged, 'cash-b': { amount: '75', asOf: '' } })
