@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { addMonths } from '../domain/month.ts'
 import type { Balance, BalanceId, Cents, Group, GroupId, GroupKind, Month, MonthEndBalance, MonthRecord } from '../domain/types.ts'
-import { monthEndHistory } from './monthEndHistory.ts'
+import { monthEndHistory, type KindMonth } from './monthEndHistory.ts'
 
 function group(id: string, kind: GroupKind, sort: number, opened: string | null = null): Group {
   return {
@@ -80,7 +81,7 @@ describe('monthEndHistory', () => {
     expect(history.combined[0].total).toBe(650_00)
   })
 
-  it('treats a group as unknown in a month where a balance open that month has no row, and ignores closed balances', () => {
+  it('does not count a group as measured in a month where a balance open that month has no row, and ignores closed balances', () => {
     const history = monthEndHistory({
       groups: [broker],
       balances: [balance('broker-x', 'broker'), balance('broker-y', 'broker'), balance('broker-old', 'broker', '2029-12')],
@@ -96,29 +97,30 @@ describe('monthEndHistory', () => {
 
     expect(january.groupValues.get(broker.id)).toEqual({ cents: 500_00, quality: 'measured' })
     expect(january.total).toBe(500_00)
-    expect(february.groupValues.get(broker.id)).toBeNull()
+    expect(february.groupValues.get(broker.id)).toEqual({ cents: 500_00, quality: 'estimated' })
     expect(february.total).toBeNull()
+    expect(february.estimatedTotal).toBe(500_00)
   })
 
   it('treats a missing month-end balance row as unknown and a zero row as known', () => {
     const history = monthEndHistory({
-      groups: [cashA, cashB],
+      groups: [cashA, { ...cashB, opened: '2030-01' as Month }],
       balances: [],
       monthEndBalances: [
         monthEndBalance('2030-01', 'cash-a', 100_00),
-        monthEndBalance('2030-01', 'cash-b', 0),
         monthEndBalance('2030-02', 'cash-a', 120_00),
+        monthEndBalance('2030-02', 'cash-b', 0),
       ],
       months: new Map(),
     })
 
     const [january, february] = history.cash.months
 
-    expect(january.total).toBe(100_00)
-    expect(january.knownPart).toBeNull()
-    expect(february.groupValues.get(cashB.id)).toBeNull()
-    expect(february.total).toBeNull()
-    expect(february.knownPart).toBe(120_00)
+    expect(january.groupValues.get(cashB.id)).toBeNull()
+    expect(january.total).toBeNull()
+    expect(january.knownPart).toBe(100_00)
+    expect(february.total).toBe(120_00)
+    expect(february.knownPart).toBeNull()
   })
 
   it('does not count a group as unknown before its first month-end balance or opened month', () => {
@@ -178,7 +180,7 @@ describe('monthEndHistory', () => {
     ])
   })
 
-  it('does not extrapolate before the first or after the last measured value', () => {
+  it('does not estimate before the first measured value, and continues the trend after the last one', () => {
     const history = monthEndHistory({
       groups: [{ ...cashA, opened: '2030-01' as Month }, cashB],
       balances: [],
@@ -195,25 +197,25 @@ describe('monthEndHistory', () => {
     expect(history.cash.months.map(month => [month.groupValues.get(cashA.id), month.groupValues.get(cashB.id)])).toEqual([
       [null, { cents: 50_00, quality: 'measured' }],
       [{ cents: 100_00, quality: 'measured' }, { cents: 60_00, quality: 'measured' }],
-      [{ cents: 110_00, quality: 'measured' }, null],
-      [{ cents: 120_00, quality: 'measured' }, null],
+      [{ cents: 110_00, quality: 'measured' }, { cents: 70_00, quality: 'estimated' }],
+      [{ cents: 120_00, quality: 'measured' }, { cents: 80_00, quality: 'estimated' }],
     ])
-    expect(history.cash.months.map(month => [month.total, month.knownPart])).toEqual([
-      [null, 50_00],
-      [160_00, null],
-      [null, 110_00],
-      [null, 120_00],
+    expect(history.cash.months.map(month => [month.total, month.estimatedTotal, month.knownPart])).toEqual([
+      [null, null, 50_00],
+      [160_00, null, null],
+      [null, 180_00, null],
+      [null, 200_00, null],
     ])
   })
 
-  it('leaves a group unknown in a gap month when it has no measured value on one side, while others are estimated', () => {
+  it('leaves a group unknown in a gap month before its first measured value, while others are estimated', () => {
     const history = monthEndHistory({
-      groups: [cashA, broker],
+      groups: [cashA, { ...broker, opened: '2030-01' as Month }],
       balances: [],
       monthEndBalances: [
         monthEndBalance('2030-01', 'cash-a', 100_00),
         monthEndBalance('2030-03', 'cash-a', 120_00),
-        monthEndBalance('2030-01', 'broker', 40_00),
+        monthEndBalance('2030-03', 'broker', 40_00),
       ],
       months: monthRecords(['2030-01', 'legacy'], ['2030-02', 'gap'], ['2030-03', 'legacy']),
     })
@@ -225,19 +227,131 @@ describe('monthEndHistory', () => {
 
   it('makes the combined total partial when either kind has an unknown group', () => {
     const history = monthEndHistory({
-      groups: [cashA, broker],
+      groups: [cashA, { ...broker, opened: '2030-01' as Month }],
       balances: [],
       monthEndBalances: [
         monthEndBalance('2030-01', 'cash-a', 100_00),
-        monthEndBalance('2030-01', 'broker', 40_00),
         monthEndBalance('2030-02', 'cash-a', 110_00),
+        monthEndBalance('2030-02', 'broker', 40_00),
       ],
       months: new Map(),
     })
 
     expect(history.combined.map(month => [month.total, month.knownPart])).toEqual([
-      [140_00, null],
-      [null, 110_00],
+      [null, 100_00],
+      [150_00, null],
     ])
+  })
+
+  describe("after a group's last measured value", () => {
+    const valuesOf = (months: readonly KindMonth[], groupId: GroupId) => months.map(month => month.groupValues.get(groupId))
+
+    it('continues the average monthly change of its readings to the newest month, filling interior gaps as before', () => {
+      const history = monthEndHistory({
+        groups: [cashA, cashB],
+        balances: [],
+        monthEndBalances: [
+          monthEndBalance('2030-01', 'cash-a', 100_00),
+          monthEndBalance('2030-03', 'cash-a', 130_00),
+          monthEndBalance('2030-06', 'cash-a', 160_00),
+          monthEndBalance('2030-08', 'cash-b', 1_00),
+        ],
+        months: monthRecords(['2030-02', 'gap']),
+      })
+
+      // (160 - 100) / 5 months: 12 euros a month after June.
+      expect(valuesOf(history.cash.months, cashA.id)).toEqual([
+        { cents: 100_00, quality: 'measured' },
+        { cents: 115_00, quality: 'estimated' },
+        { cents: 130_00, quality: 'measured' },
+        { cents: 140_00, quality: 'estimated' },
+        { cents: 150_00, quality: 'estimated' },
+        { cents: 160_00, quality: 'measured' },
+        { cents: 172_00, quality: 'estimated' },
+        { cents: 184_00, quality: 'estimated' },
+      ])
+      expect(history.cash.months[1].isGap).toBe(true)
+      expect(history.cash.months.at(-1)).toMatchObject({ month: '2030-08', total: null, estimatedTotal: 185_00, knownPart: null })
+      expect(history.combined.at(-1)).toMatchObject({ total: null, estimatedTotal: 185_00 })
+    })
+
+    it('takes the trend from its latest twelve readings only', () => {
+      const firstTwo = [monthEndBalance('2030-01', 'cash-a', 0), monthEndBalance('2030-02', 'cash-a', 1_000_00)]
+      const latestTwelve = Array.from({ length: 12 }, (_, index) =>
+        monthEndBalance(addMonths('2030-03' as Month, index), 'cash-a', 100_00 + index * 10_00)
+      )
+
+      const history = monthEndHistory({
+        groups: [cashA, cashB],
+        balances: [],
+        monthEndBalances: [...firstTwo, ...latestTwelve, monthEndBalance('2031-03', 'cash-b', 1_00)],
+        months: new Map(),
+      })
+
+      // From 100 in March 2030 to 210 in February 2031: 10 euros a month.
+      expect(history.cash.months.at(-1)?.groupValues.get(cashA.id)).toEqual({ cents: 220_00, quality: 'estimated' })
+    })
+
+    it('uses fewer than twelve readings when that is all there is, rounded to the cent', () => {
+      const history = monthEndHistory({
+        groups: [cashA, cashB],
+        balances: [],
+        monthEndBalances: [
+          monthEndBalance('2030-01', 'cash-a', 100_00),
+          monthEndBalance('2030-04', 'cash-a', 100_01),
+          monthEndBalance('2030-06', 'cash-b', 1_00),
+        ],
+        months: new Map(),
+      })
+
+      // A third of a cent a month: 100.0133 and 100.0167 euros in May and June.
+      expect(valuesOf(history.cash.months, cashA.id).slice(3)).toEqual([
+        { cents: 100_01, quality: 'measured' },
+        { cents: 100_01, quality: 'estimated' },
+        { cents: 100_02, quality: 'estimated' },
+      ])
+    })
+
+    it('carries a single reading forward', () => {
+      const history = monthEndHistory({
+        groups: [cashA, cashB],
+        balances: [],
+        monthEndBalances: [
+          monthEndBalance('2030-01', 'cash-a', 50_00),
+          monthEndBalance('2030-01', 'cash-b', 10_00),
+          monthEndBalance('2030-02', 'cash-b', 20_00),
+          monthEndBalance('2030-03', 'cash-b', 30_00),
+        ],
+        months: new Map(),
+      })
+
+      expect(valuesOf(history.cash.months, cashA.id)).toEqual([
+        { cents: 50_00, quality: 'measured' },
+        { cents: 50_00, quality: 'estimated' },
+        { cents: 50_00, quality: 'estimated' },
+      ])
+      expect(history.cash.months.map(month => month.estimatedTotal)).toEqual([null, 70_00, 80_00])
+    })
+
+    it('estimates nothing past the newest month of the history or past the month a group closed', () => {
+      const history = monthEndHistory({
+        groups: [{ ...cashA, closed: '2030-02' as Month }, cashB],
+        balances: [],
+        monthEndBalances: [
+          monthEndBalance('2030-01', 'cash-a', 10_00),
+          monthEndBalance('2030-01', 'cash-b', 20_00),
+          monthEndBalance('2030-02', 'cash-b', 20_00),
+        ],
+        months: monthRecords(['2030-04', 'gap']),
+      })
+
+      expect(history.cash.months.map(month => month.month)).toEqual(['2030-01', '2030-02', '2030-03', '2030-04'])
+      expect(valuesOf(history.cash.months, cashA.id)).toEqual([
+        { cents: 10_00, quality: 'measured' },
+        { cents: 10_00, quality: 'estimated' },
+        undefined,
+        undefined,
+      ])
+    })
   })
 })

@@ -29,13 +29,11 @@ describe('monthByGroup', () => {
   })
 
   it('shows an unknown group without a value and makes the total of its kind a lower bound', () => {
-    const monthEndBalances = [
-      monthEndBalance('2030-01', 'current', 100_00),
-      monthEndBalance('2030-02', 'savings', 400_00),
-      monthEndBalance('2030-01', 'savings', 300_00),
-    ]
+    const groupsWithNewCurrent = groups.map(entry => (entry.id === 'current' ? { ...entry, opened: '2030-02' as Month } : entry))
+    const monthEndBalances = [monthEndBalance('2030-02', 'savings', 400_00), monthEndBalance('2030-01', 'savings', 300_00)]
+    const history = monthEndHistory({ groups: groupsWithNewCurrent, balances: [], monthEndBalances, months: new Map() })
 
-    const [cash] = monthByGroup(monthEndHistory({ groups, balances: [], monthEndBalances, months: new Map() }), '2030-02' as Month)
+    const [cash] = monthByGroup(history, '2030-02' as Month)
 
     expect(cash.groups.find(line => line.group.id === 'current')?.value).toBeNull()
     expect(cash.total).toEqual({ cents: 400_00, state: 'at-least', includesEstimates: false })

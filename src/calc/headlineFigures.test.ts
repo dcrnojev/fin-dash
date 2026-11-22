@@ -57,8 +57,8 @@ describe('headlineFigures', () => {
   })
 
   it('shows the known part of a partial total and no change against it', () => {
-    const monthEndBalances = [...cashYear, monthEndBalance(addMonths(latest, -1), fund.id, 50_00)]
-    const figures = headlineFigures(monthEndHistory({ groups: [cash, fund], balances: [], monthEndBalances, months: new Map() }))
+    const newFund = { ...fund, opened: latest }
+    const figures = headlineFigures(monthEndHistory({ groups: [cash, newFund], balances: [], monthEndBalances: cashYear, months: new Map() }))
 
     expect(figures?.investments).toEqual({
       total: null,

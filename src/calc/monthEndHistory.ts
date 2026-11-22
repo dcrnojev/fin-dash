@@ -1,7 +1,7 @@
 import { isOpenInMonth, monthIndex, monthsFromTo } from '../domain/month.ts'
 import type { Balance, BalanceId, Cents, Group, GroupId, GroupKind, Ledger, Month } from '../domain/types.ts'
 
-// measured: from a month-end balance row. estimated: interpolated for display only; never written back and never a measurement.
+// measured: from a month-end balance row. estimated: filled in for display only; never written back and never a measurement.
 export type Quality = 'measured' | 'estimated'
 
 export interface QualifiedCents {
@@ -26,7 +26,8 @@ export interface MonthTotal {
 
 export interface KindMonth extends MonthTotal {
   // Each group tracked in this month: its value, or null when it is unknown (not zero). A missing month-end balance is estimated
-  // from the group's nearest measured values before and after it; with no measured value on one side it stays unknown.
+  // from the group's nearest measured values before and after it, or from its recent trend after its last one; before its
+  // first measured value it stays unknown.
   // A group is tracked from its opened month (or its first month-end balance) to its closed month (or the end of the history).
   groupValues: ReadonlyMap<GroupId, QualifiedCents | null>
 }
@@ -137,10 +138,21 @@ function kindHistory(ledger: HistoryInput, kind: GroupKind, months: Month[], gap
   return { groups: kindGroups, months: kindMonths }
 }
 
-// Fills each missing value on a straight line between the nearest measured values before and after it, rounded to the
-// cent. Positions are consecutive months, so the distance between positions is the number of months.
+// How many of a group's latest measured values set the trend that continues it past its last measured month.
+const trendReadings = 12
+
+// Fills each missing value on a straight line between the nearest measured values before and after it. After the last
+// measured value, the line continues at the average monthly change over the latest `trendReadings` measured values, or
+// flat with only one. Before the first measured value it stays unknown. Rounded to the cent. Positions are consecutive
+// months up to the newest month of the history, so the distance between positions is the number of months.
 function withEstimates(measured: readonly (Cents | null | undefined)[]): (QualifiedCents | null | undefined)[] {
   const anchors = measured.flatMap((cents, position) => (cents === null || cents === undefined ? [] : [{ position, cents }]))
+  const last = anchors.at(-1)
+  const trendStart = anchors.at(-trendReadings) ?? anchors.at(0)
+  const monthlyTrend =
+    last === undefined || trendStart === undefined || last.position === trendStart.position
+      ? 0
+      : (last.cents - trendStart.cents) / (last.position - trendStart.position)
 
   return measured.map((cents, position) => {
     if (cents === undefined)
@@ -152,8 +164,11 @@ function withEstimates(measured: readonly (Cents | null | undefined)[]): (Qualif
     const before = anchors.findLast(anchor => anchor.position < position)
     const after = anchors.find(anchor => anchor.position > position)
 
-    if (before === undefined || after === undefined)
+    if (before === undefined)
       return null
+
+    if (after === undefined)
+      return { cents: Math.round(before.cents + monthlyTrend * (position - before.position)) as Cents, quality: 'estimated' }
 
     const share = (position - before.position) / (after.position - before.position)
     return { cents: Math.round(before.cents + (after.cents - before.cents) * share) as Cents, quality: 'estimated' }

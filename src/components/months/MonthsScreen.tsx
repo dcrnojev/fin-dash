@@ -93,7 +93,10 @@ export function MonthsScreen({ ledger, monthToClose, canWrite, hideAmounts }: Mo
         </div>
       )}
 
-      <p className="chart-note">≈ estimated between two measured months; ≥ at least, where a group cannot be estimated. Pension stays out of the totals.</p>
+      <p className="chart-note">
+        ≈ estimated between two measured months, or from the recent trend after the last one; ≥ at least, where a group cannot be
+        estimated. Pension stays out of the totals.
+      </p>
     </>
   )
 }

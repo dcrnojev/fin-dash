@@ -99,8 +99,9 @@ that changes, with the rows it found, and a button. Version 2 renamed the tabs `
   balances, and edits to existing ones.
 - `src/calc/`: pure functions from a validated ledger to chart series and headline figures. A month without a month-end balance row
   for a group is never zero. Between two measured months of the same group it is estimated on a straight line, gap months
-  included; before a group's first or after its last measured month it stays unknown, and a total that needs it shows only
-  the known part as a lower bound. Charts, tiles, tooltips and tables mark estimated values with `≈` (dotted lines with
+  included. After a group's last measured month, up to the newest month in the history, it is estimated as the last measured
+  value plus the group's average monthly change over its latest 12 measured values (carried flat with only one). Before a
+  group's first measured month it stays unknown, and a total that needs it shows only the known part as a lower bound. Charts, tiles, tooltips and tables mark estimated values with `≈` (dotted lines with
   hollow diamonds, hatched columns) and lower bounds with `≥` (dashed or faded).
 - Estimates exist only on screen: nothing is written to the spreadsheet, gap months keep the status `gap`, and later
   calculations over a gap (spending, for one) must not read an estimated value as a measured one.

@@ -13,7 +13,9 @@ import { seriesColor } from './seriesColor'
 import { lineStateEntries } from './stateEntries'
 import { groupValueText, totalText } from './valueText'
 
-const cashNote = 'Month-end balances. ≈ estimated on a straight line between two measured months; ≥ at least, where a group cannot be estimated.'
+const cashNote =
+  "Month-end balances. ≈ estimated on a straight line between two measured months, or from a group's recent trend after its last " +
+  'measured month; ≥ at least, where a group cannot be estimated.'
 
 interface CashChartProps {
   history: KindHistory

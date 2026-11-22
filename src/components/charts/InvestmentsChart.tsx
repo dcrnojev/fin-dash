@@ -13,8 +13,8 @@ import { groupValueText, totalText } from './valueText'
 const lowerBoundOpacity = 0.35
 
 const investmentsNote =
-  'Month-end values by group, pension groups left out. ≈ estimated between two measured months (hatched); ≥ at least, where a group ' +
-  'cannot be estimated (faded).'
+  'Month-end values by group, pension groups left out. ≈ estimated between two measured months, or from the recent trend after ' +
+  'the last one (hatched); ≥ at least, where a group cannot be estimated (faded).'
 
 interface InvestmentsChartProps {
   history: KindHistory
