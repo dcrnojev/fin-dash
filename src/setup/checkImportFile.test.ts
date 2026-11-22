@@ -9,6 +9,7 @@ const bundle = {
     legacyLastMonth: null,
     monthEndRule: null,
     lastWriteAppVersion: null,
+    monthlySavingsGoal: null,
   },
   people: [{ id: 'pa', name: 'Partner A', role: 'adult', note: null }],
   groups: [],

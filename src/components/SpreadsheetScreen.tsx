@@ -12,6 +12,7 @@ import { navigate, useRoute } from '../routing/useRoute'
 import { CloseMonthScreen } from './close/CloseMonthScreen'
 import { EditMonthScreen } from './close/EditMonthScreen'
 import { DataHealthScreen } from './DataHealthScreen'
+import { GoalSetupCard } from './goal/GoalSetupCard'
 import { HomeScreen } from './home/HomeScreen'
 import { MonthsScreen } from './months/MonthsScreen'
 import { PageHeader } from './PageHeader'
@@ -99,7 +100,16 @@ export function SpreadsheetScreen({
       )}
 
       {route.page === 'setup' ? (
-        setupScreen
+        <>
+          {setupScreen}
+          {loaded?.ledger && summary?.canWrite && (
+            <GoalSetupCard
+              spreadsheetId={loaded.spreadsheet.id}
+              goal={loaded.ledger.meta?.monthlySavingsGoal ?? null}
+              onSaved={message => showWritten(message, route)}
+            />
+          )}
+        </>
       ) : (
         <>
           {state.status === 'loading' && <p className="card card-padded muted">Reading the spreadsheet...</p>}
@@ -208,7 +218,14 @@ function LoadedSpreadsheet({ loaded, ledger, summary, route, user, hideAmounts, 
       return (
         <>
           {readOnlyNotice}
-          <HomeScreen ledger={ledger} monthToClose={monthToClose} canWrite={canWrite} hideAmounts={hideAmounts} />
+          <HomeScreen
+            ledger={ledger}
+            monthToClose={monthToClose}
+            canWrite={canWrite}
+            spreadsheetId={spreadsheet.id}
+            hideAmounts={hideAmounts}
+            onGoalSaved={message => onWritten(message, route)}
+          />
         </>
       )
 

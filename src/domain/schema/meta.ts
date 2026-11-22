@@ -1,13 +1,15 @@
+import { centsToEuros, toCents } from '../money.ts'
 import { parseMonth } from '../month.ts'
-import type { Issue, Meta, Month } from '../types.ts'
+import type { Cents, Issue, Meta, Month } from '../types.ts'
 import type { MetaEntry } from './metaTab.ts'
 
-const metaKeys = {
+export const metaKeys = {
   currency: 'currency',
   goLiveMonth: 'go_live_month',
   lastWriteAppVersion: 'last_write_app_version',
   legacyLastMonth: 'legacy_last_month',
   monthEndRule: 'month_end_rule',
+  monthlySavingsGoal: 'monthly_savings_goal',
   schemaVersion: 'schema_version',
 } as const satisfies Record<keyof Meta, string>
 
@@ -17,7 +19,7 @@ export const appSchemaVersion = 2
 
 // The app writes `_meta` last when it creates the spreadsheet, so a missing schema version means the setup did not finish.
 export function metaFromEntries(entries: readonly MetaEntry[], issues: Issue[]): Meta | null {
-  const values = new Map(entries.map(entry => [entry.key, entry.value]))
+  const values = new Map(entries.flatMap(entry => (entry.value === null ? [] : [[entry.key, entry.value] as const])))
   const metaIssue = (code: string, message: string): void => {
     issues.push({ severity: 'error', code, tab: '_meta', row: null, column: 'value', message })
   }
@@ -71,7 +73,21 @@ export function metaFromEntries(entries: readonly MetaEntry[], issues: Issue[]):
     legacyLastMonth: month(metaKeys.legacyLastMonth),
     monthEndRule: text(metaKeys.monthEndRule),
     lastWriteAppVersion: text(metaKeys.lastWriteAppVersion),
+    monthlySavingsGoal: monthlySavingsGoal(values.get(metaKeys.monthlySavingsGoal), issues),
   }
+}
+
+// Optional, so a goal that cannot be read leaves the spreadsheet readable without one.
+function monthlySavingsGoal(value: string | number | undefined, issues: Issue[]): Cents | null {
+  if (value === undefined)
+    return null
+
+  if (typeof value === 'number' && value > 0)
+    return toCents(value)
+
+  const message = `${metaKeys.monthlySavingsGoal} ${value} is not an amount in euros above zero, so no goal is shown.`
+  issues.push({ severity: 'warning', code: 'invalid-monthly-savings-goal', tab: '_meta', row: null, column: 'value', message })
+  return null
 }
 
 export function metaToEntries(meta: Meta): MetaEntry[] {
@@ -80,11 +96,12 @@ export function metaToEntries(meta: Meta): MetaEntry[] {
     { key: metaKeys.currency, value: meta.currency },
   ]
 
-  const optional: [string, string | null][] = [
+  const optional: [string, string | number | null][] = [
     [metaKeys.goLiveMonth, meta.goLiveMonth],
     [metaKeys.legacyLastMonth, meta.legacyLastMonth],
     [metaKeys.monthEndRule, meta.monthEndRule],
     [metaKeys.lastWriteAppVersion, meta.lastWriteAppVersion],
+    [metaKeys.monthlySavingsGoal, meta.monthlySavingsGoal === null ? null : centsToEuros(meta.monthlySavingsGoal)],
   ]
 
   for (const [key, value] of optional) {

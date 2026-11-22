@@ -36,6 +36,7 @@
   --chart-grid: #e1e0d9;
   --chart-axis: #c3c2b7;
   --chart-hover: rgba(11, 11, 11, 0.06);
+  --chart-goal: var(--series-2);
 
   --radius: 10px;
   --sidebar-width: 248px;
@@ -1012,6 +1013,69 @@ td.number {
   font-size: 12.5px;
 }
 
+/* The goal tile is a row of its own under the other tiles: headline, progress, action. */
+.goal-tile {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(11rem, auto) minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 28px;
+}
+
+.goal-headline,
+.goal-detail {
+  display: grid;
+  gap: 6px;
+}
+
+.goal-tile > .goal-editor {
+  grid-column: 1 / -1;
+  max-width: 28rem;
+}
+
+.goal-bar {
+  max-width: 32rem;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: var(--color-surface-3);
+}
+
+.goal-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--chart-goal);
+}
+
+.goal-text {
+  font-size: 12.5px;
+}
+
+.goal-tile-action {
+  justify-self: start;
+  font-size: 13px;
+}
+
+.goal-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.goal-editor-hint {
+  font-size: 12.5px;
+}
+
+.goal-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.goal-setup .goal-editor {
+  max-width: 28rem;
+}
+
 .home-columns {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
@@ -1634,6 +1698,11 @@ td.number {
     grid-row: 2;
     width: 90px;
     margin: 0;
+  }
+
+  .goal-tile {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
   }
 
   .chart-card {

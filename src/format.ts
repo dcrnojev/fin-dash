@@ -6,6 +6,7 @@ const euros = new Intl.NumberFormat('hr-HR', { style: 'currency', currency: 'EUR
 const signedEuros = new Intl.NumberFormat('hr-HR', { style: 'currency', currency: 'EUR', signDisplay: 'exceptZero' })
 const wholeEuros = new Intl.NumberFormat('hr-HR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
 const signedPercent = new Intl.NumberFormat('hr-HR', { style: 'percent', maximumFractionDigits: 1, signDisplay: 'exceptZero' })
+const wholePercent = new Intl.NumberFormat('hr-HR', { style: 'percent', maximumFractionDigits: 0 })
 const shortMonth = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' })
 const longMonth = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
 const monthName = new Intl.DateTimeFormat('en-US', { month: 'long', timeZone: 'UTC' })
@@ -29,6 +30,11 @@ export function displayWholeEuros(cents: number, hidden: boolean): string {
 // Shown even while amounts are hidden: a rate of change reveals no balance.
 export function displaySignedPercent(ratio: number): string {
   return signedPercent.format(ratio)
+}
+
+// A share such as progress towards a goal, in whole percent; shown even while amounts are hidden.
+export function displayPercent(ratio: number): string {
+  return wholePercent.format(ratio)
 }
 
 // 'Oct 2026', for axes and tables.

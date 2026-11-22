@@ -45,6 +45,8 @@ export interface Meta {
   legacyLastMonth: Month | null
   monthEndRule: string | null
   lastWriteAppVersion: string | null
+  // How much cash and investments together should grow each month; null when no goal is set.
+  monthlySavingsGoal: Cents | null
 }
 
 export const personRoles = ['adult', 'child'] as const

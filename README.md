@@ -35,7 +35,8 @@ closed, and adds and edits groups and balances.
 - Every load reads all the app's tabs in one request, unformatted, so a Croatian-locale sheet still returns numbers and
   dates come back as serial numbers. The spreadsheet's id is remembered per device in `localStorage`.
 - The app never deletes a row. It appends rows, editing a month overwrites only the `value`, `as_of` and `source`
-  cells of the rows it changes, and editing a group or balance overwrites only the cells of its row that change. Before writing it reads the tab again and works from that tab's header row, so a tab
+  cells of the rows it changes, editing a group or balance overwrites only the cells of its row that change, and setting
+  the savings goal overwrites the value cell of its `_meta` row. Before writing it reads the tab again and works from that tab's header row, so a tab
   whose columns were reordered or extended by hand gets each value under its own header. A value for a column the tab
   lacks stops the write with a message naming the column to add.
 
@@ -170,6 +171,14 @@ that changes, with the rows it found, and a button. Version 2 renamed the tabs `
   is written. It then overwrites that row's `value`, `as_of` (the day of the write, or the statement date for a
   pension) and `source` (`app`) cells in one request, re-reads, and appends rows for added values. The `months` row is
   never changed.
+
+## Monthly savings goal
+
+- One optional amount for cash and investments together, stored as the `monthly_savings_goal` row of `_meta` and set
+  from the home screen or Setup. Clearing it removes the goal; the last save wins.
+- It is never used as data. The Cash and investments chart marks each month's target as the previous month's total
+  (measured or estimated) plus the goal, and the home screen compares the newest month's change with it. That change
+  includes market gains and losses, so the home screen says "grew", not "saved".
 
 ## Importing the legacy history
 

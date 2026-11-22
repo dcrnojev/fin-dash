@@ -3,7 +3,8 @@ import { RowReader } from './rowReader.ts'
 
 export interface MetaEntry {
   key: string
-  value: string | number
+  // Null for a key whose value cell is blank, which reads as if the key had no row: clearing the cell removes an optional value.
+  value: string | number | null
 }
 
 const columns: readonly ColumnSpec[] = [
@@ -18,12 +19,13 @@ export const metaTab: TabSpec<MetaEntry> = {
   fromRow(cells, ref, issues) {
     const read = new RowReader(columns, cells, ref, issues)
     const key = read.text('key')
-    const value = typeof cells.value === 'number' ? cells.value : read.text('value')
+    const isBlank = cells.value === null || (typeof cells.value === 'string' && cells.value.trim() === '')
+    const value = typeof cells.value === 'number' ? cells.value : isBlank ? null : read.text('value')
 
-    if (key === null || value === null || !read.ok)
+    if (key === null || !read.ok)
       return null
 
     return { key, value }
   },
-  toRow: entry => ({ key: entry.key, value: entry.value }),
+  toRow: entry => ({ key: entry.key, value: entry.value ?? '' }),
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { historyRanges, monthsInRange, type HistoryRange } from '../../calc/historyRange'
 import type { KindHistory, MonthEndHistory } from '../../calc/monthEndHistory'
-import type { Month } from '../../domain/types'
+import type { Cents, Month } from '../../domain/types'
 import { CashChart } from '../charts/CashChart'
 import type { ChartView } from '../charts/ChartBody'
 import { CombinedChart } from '../charts/CombinedChart'
@@ -30,10 +30,12 @@ interface HistoryChartCardProps {
   history: MonthEndHistory
   editableMonths: ReadonlySet<Month>
   hideAmounts: boolean
+  // Each month's goal target, shown on the cash-and-investments chart; empty when no goal is set.
+  goalTargets: ReadonlyMap<Month, Cents>
 }
 
 // One chart at a time, with what it shows, over how many months, and whether as a chart or a table.
-export function HistoryChartCard({ history, editableMonths, hideAmounts }: HistoryChartCardProps) {
+export function HistoryChartCard({ history, editableMonths, hideAmounts, goalTargets }: HistoryChartCardProps) {
   const [topic, setTopic] = useState<ChartTopic>('cash')
   const [range, setRange] = useState<HistoryRange>(12)
   const [view, setView] = useState<ChartView>('chart')
@@ -53,7 +55,7 @@ export function HistoryChartCard({ history, editableMonths, hideAmounts }: Histo
 
       {topic === 'cash' && <CashChart history={inRange(history.cash)} {...shared} />}
       {topic === 'investments' && <InvestmentsChart history={inRange(history.investments)} {...shared} />}
-      {topic === 'combined' && <CombinedChart months={monthsInRange(history.combined, range)} {...shared} />}
+      {topic === 'combined' && <CombinedChart months={monthsInRange(history.combined, range)} goalTargets={goalTargets} {...shared} />}
 
       {topic === 'pensions' &&
         (history.pensions.groups.length === 0 ? (

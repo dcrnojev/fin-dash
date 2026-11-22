@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { Change, HeadlineFigure, HeadlineFigures } from '../calc/headlineFigures'
 import type { MonthEndHistory, MonthTotal } from '../calc/monthEndHistory'
 import { monthFigure, type MonthFigure } from '../calc/monthFigure'
@@ -14,9 +15,11 @@ interface HeadlineTilesProps {
   figures: HeadlineFigures
   history: MonthEndHistory
   hideAmounts: boolean
+  // A last tile of its own, such as the monthly goal, on a row of its own.
+  extraTile?: ReactNode
 }
 
-export function HeadlineTiles({ figures, history, hideAmounts }: HeadlineTilesProps) {
+export function HeadlineTiles({ figures, history, hideAmounts, extraTile }: HeadlineTilesProps) {
   const tiles = [
     { label: 'Total cash', figure: figures.cash, months: history.cash.months },
     { label: 'Total investments', figure: figures.investments, months: history.investments.months },
@@ -28,6 +31,7 @@ export function HeadlineTiles({ figures, history, hideAmounts }: HeadlineTilesPr
       {tiles.map(tile => (
         <Tile key={tile.label} {...tile} month={figures.month} hideAmounts={hideAmounts} />
       ))}
+      {extraTile}
     </ul>
   )
 }

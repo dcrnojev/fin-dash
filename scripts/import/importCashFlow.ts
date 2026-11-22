@@ -61,6 +61,7 @@ export function importCashFlow(workbook: LegacyWorkbook): CashFlowImport {
       legacyLastMonth: months.at(-1)?.month ?? null,
       monthEndRule,
       lastWriteAppVersion: null,
+      monthlySavingsGoal: null,
     },
     people: legacyPeople(cashBalance.people),
     groups,

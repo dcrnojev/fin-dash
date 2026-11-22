@@ -37,6 +37,8 @@ function SeriesKeyShape({ color, mark }: SeriesKeyProps) {
           <polygon points="8,1.5 11.5,5 8,8.5 4.5,5" fill="var(--color-surface)" stroke={color} strokeWidth="1.5" />
         </>
       )
+    case 'tick':
+      return <line x1="4" y1="5" x2="12" y2="5" stroke={color} strokeWidth="3" />
     case 'dashed-line':
       return <line x1="1" y1="5" x2="15" y2="5" stroke={color} strokeWidth="2" strokeDasharray="4 3" />
     case 'line':
