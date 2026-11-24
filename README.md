@@ -54,6 +54,13 @@ at the end of a month.
    authorised origins and the API key restriction protect the app.
 4. `npm install`, then `npm run dev`. `npm run build` writes the static site to `dist/`; `npm test` runs Vitest.
 
+## Hosting
+
+`.github/workflows/deploy.yml` lints, tests, builds and publishes to GitHub Pages on every push to `main`. It needs
+Pages set to deploy from GitHub Actions and the three `VITE_GOOGLE_*` values as repository Actions variables. The build
+uses relative asset paths, so it runs under the Pages project path; `public/manifest.webmanifest` makes it installable,
+and `public/privacy.html` is the privacy policy the Google consent screen links to.
+
 ## Importing the legacy history
 
 `npm run import` is a one-time local script in `scripts/import/`, not part of the app. It reads

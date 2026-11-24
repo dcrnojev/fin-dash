@@ -29,6 +29,10 @@ export function SignInPanel({ setupProblem, resuming, continueAsEmail, onSignIn,
 
       {resuming && !setupProblem && <p className="muted">Checking for a previous session...</p>}
       {setupProblem && <p className="setup-problem">{setupProblem}</p>}
+
+      <p className="muted">
+        <a href="privacy.html">Privacy policy</a>
+      </p>
     </section>
   )
 }

@@ -1,0 +1,63 @@
+# Summary:
+#   1. On every push to main (or by hand), check out the repo and install the locked dependencies.
+#   2. Lint and run the unit tests; a failure stops the deploy.
+#   3. Build the static site with the Google settings from the repository's Actions variables.
+#   4. Publish dist/ to GitHub Pages.
+#
+# Notes:
+#   - Pages must be set to deploy from "GitHub Actions" (Settings, Pages, Source).
+#   - VITE_GOOGLE_CLIENT_ID, VITE_GOOGLE_API_KEY and VITE_GOOGLE_PROJECT_NUMBER are Actions variables, not secrets: they
+#     end up in the built JavaScript anyway. A missing one builds fine but the app shows the setup problem on sign-in.
+#   - The Pages origin must be an authorised JavaScript origin on the OAuth client and an allowed website on the API key.
+#   - xlsx installs from the SheetJS CDN, so npm ci needs that host reachable.
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+
+      - run: npm run build
+        env:
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
+          VITE_GOOGLE_API_KEY: ${{ vars.VITE_GOOGLE_API_KEY }}
+          VITE_GOOGLE_PROJECT_NUMBER: ${{ vars.VITE_GOOGLE_PROJECT_NUMBER }}
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

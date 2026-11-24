@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <title>fin-dash privacy policy</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --background: #f3f2ee;
+        --text: #0b0b0b;
+        --muted: #52514e;
+        --link: #2a78d6;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --background: #0d0d0d;
+          --text: #f0efec;
+          --muted: #c3c2b7;
+          --link: #3987e5;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+
+      body {
+        background: var(--background);
+        color: var(--text);
+        font: 16px/1.6 system-ui, sans-serif;
+        padding: 40px 20px;
+      }
+
+      main {
+        max-width: 680px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        font-size: 1.6rem;
+        margin-bottom: 4px;
+      }
+
+      h2 {
+        font-size: 1.1rem;
+        margin: 28px 0 6px;
+      }
+
+      p,
+      ul {
+        margin-bottom: 10px;
+      }
+
+      ul {
+        padding-left: 1.2rem;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      a {
+        color: var(--link);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>fin-dash privacy policy</h1>
+      <p class="muted">fin-dash is a personal finance dashboard that keeps a household's figures in its own Google Spreadsheet.</p>
+
+      <h2>What the app accesses</h2>
+      <p>
+        When you sign in with Google, the app asks for your name, email address and the <code>drive.file</code> permission.
+        That permission covers only spreadsheets the app created for you or that you chose in the Google file picker. The app
+        cannot see any other file in your Drive.
+      </p>
+
+      <h2>Where your data goes</h2>
+      <ul>
+        <li>The app runs entirely in your browser. It reads and writes your spreadsheet directly with Google; there is no
+          server of ours in between, and no copy of your data is kept anywhere else.</li>
+        <li>Your email address is written into the spreadsheet when you close a month, to record who closed it.</li>
+        <li>Your browser keeps the spreadsheet's id, your email address and the "Hide amounts" choice on your device, and
+          the Google access token only for the open tab. Signing out removes the token and the email address.</li>
+        <li>There are no analytics, advertising, tracking cookies or third-party scripts other than Google's own sign-in
+          and file picker.</li>
+      </ul>
+
+      <h2>Google user data</h2>
+      <p>
+        The app's use of information received from Google APIs adheres to the
+        <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>,
+        including the Limited Use requirements. Data is used only to show and update your own spreadsheet, and is never
+        sold, shared or used for advertising.
+      </p>
+
+      <h2>Removing access</h2>
+      <p>
+        You can revoke the app's access at any time in your
+        <a href="https://myaccount.google.com/connections">Google Account connections</a>. Your spreadsheet stays in your
+        Drive, and deleting it there removes the data.
+      </p>
+
+      <h2>Contact</h2>
+      <p>
+        Questions go to the issues of the <a href="https://github.com/dcrnojev/fin-dash">fin-dash repository</a>.
+      </p>
+
+      <p class="muted"><a href="./">Back to fin-dash</a></p>
+    </main>
+  </body>
+</html>
